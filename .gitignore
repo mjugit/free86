@@ -1,0 +1,8 @@
+build/*
+tools/bin
+tools/*-elf
+tools/include
+tools/lib
+tools/libexec
+tools/share
+
