@@ -35,3 +35,9 @@ qemu: $(MBR_BIN)
 	dd if=$(MBR_BIN) of=$(KICKSTART_FLOPPY) bs=512 count=1 seek=0
 	qemu-system-i386 -drive if=floppy,file=$(KICKSTART_FLOPPY),format=raw
 
+qemu-debug: $(MBR_BIN)
+	rm -f $(KICKSTART_FLOPPY)
+	dd if=/dev/zero of=$(KICKSTART_FLOPPY) bs=512 count=2880
+	dd if=$(MBR_BIN) of=$(KICKSTART_FLOPPY) bs=512 count=1 seek=0
+	qemu-system-i386 -drive if=floppy,file=$(KICKSTART_FLOPPY),format=raw -s -S
+
