@@ -1,1349 +1,1919 @@
+# BIOS function reference
+
+## Introduction
+
+The BIOS (Basic Input/Output System) Interrupt Services provide a critical interface for system developers to access and control hardware components at a low level. These services allow software to interact with hardware devices such as disks, video displays, keyboards, and real-time clocks, directly through BIOS-provided interrupts.
+
+BIOS interrupt functions are a key part of legacy system programming, especially in Real Mode, where they offer standardized ways to perform essential tasks. While modern operating systems largely abstract hardware control through device drivers and high-level APIs, BIOS interrupts remain vital in specific cases such as bootloaders, embedded systems, firmware, and operating system development. For example, BIOS services are often the only available methods to access hardware in the early boot stages before an operating system or custom drivers are loaded.
+
+This document serves as a comprehensive reference for developers working on low-level system programming, especially on older PC systems or in environments where Real Mode access is required. It covers the most important BIOS interrupt services, providing detailed descriptions of each function, their parameters, return values, and potential caveats.
+
+### What are BIOS Interrupt Services?
+
+BIOS Interrupt Services are a set of functions provided by the system’s BIOS that can be invoked using software interrupts. By issuing an interrupt call, software can request specific hardware-related tasks such as reading from a disk, displaying graphics, or querying the system time. Each service is accessed through a specific interrupt vector (for example, INT 0x13 for disk operations or INT 0x10 for video services).
+
+These interrupts are especially useful in Real Mode, where software has direct access to hardware without the abstraction layer provided by modern operating systems. Real Mode operates with 16-bit addresses and limited memory access, and it’s in this environment that BIOS interrupts are most frequently used, particularly in system startup code or bootloaders.
+
+### Important Information for Developers
+
+When working with BIOS interrupts, developers must understand the constraints and limitations of Real Mode, where all of these services operate. Here are some key points to keep in mind:
+
+- **Real Mode vs. Protected Mode:** BIOS interrupts are designed for use in Real Mode, which operates with 16-bit memory addressing and limited access to system memory. Once a system enters Protected Mode (used by modern operating systems), BIOS interrupts are typically no longer accessible unless explicitly supported by virtualization or emulation.
+  
+- **Register Usage:** BIOS interrupt calls rely on the use of CPU registers to pass parameters and return values. For each function, specific registers such as `AX`, `BX`, `CX`, and others must be set before invoking the interrupt. The result is also returned through registers, so careful management of these is essential for correct function usage.
+
+- **Risk of System Instability:** Direct hardware access through BIOS interrupts can be risky. Improper use of these services can lead to system instability, data corruption, or crashes. Developers should ensure that the hardware state is correctly managed and that any interrupt calls are compatible with the underlying hardware.
+
+- **Legacy Hardware:** Many BIOS interrupt services were designed for legacy hardware such as floppy drives, parallel ports, and early video adapters. While these services are still relevant for bootloaders or older systems, modern hardware may not fully support these functions. Developers should consider compatibility and test their software on the intended hardware environment.
+
+- **Use in Bootloaders and OS Development:** BIOS interrupts are crucial during the early stages of system boot, before the operating system or custom drivers take control. Bootloaders like GRUB and other system-level software use these interrupts to load the operating system from disk, query the system configuration, or display information on the screen.
+
+- **Modern Alternatives:** While BIOS interrupts are essential for low-level hardware access, modern systems often use ACPI (Advanced Configuration and Power Interface) for tasks like power management, and UEFI (Unified Extensible Firmware Interface) has replaced BIOS in many contemporary computers. Developers targeting modern systems should be aware of these alternatives but may still need to rely on BIOS services for backward compatibility or during the system boot process.
+
+### Best Practices for Using BIOS Interrupts
+
+- **Understand the Hardware Environment:** Ensure that the target system supports the BIOS interrupts being used, especially when working with modern hardware or emulated environments.
+  
+- **Handle Errors Gracefully:** Always check the return values and status codes provided by BIOS interrupts to handle errors gracefully, such as disk read failures or device timeouts.
+  
+- **Preserve Registers:** Since BIOS interrupts alter register values, it's crucial to save and restore any registers not involved in the interrupt call to avoid corrupting the program state.
+
+- **Optimize for Real Mode:** BIOS interrupts are often used in memory-constrained environments. Efficient use of registers, stack memory, and inline assembly is important for performance and reliability, especially when working within a bootloader or early-stage OS code.
 
 
-## BIOS Video Services (INT 10h)
+## INT 0x15 - System Services
 
-The **INT 10h** interrupt provides a set of video-related services that allow you to control the display, manage the cursor, and write text or graphics directly to the screen. This section details the individual functions available under **INT 10h**, their parameters, and usage examples in **assembly**.
+| Function | Description |
+| --- | --- |
+| `0x88` | Get Extended Memory Size |
+| `0x87` | Move Block in Extended Memory (286+) |
+| `0xC0` | Get System Configuration Parameters |
+| `0x41` | Wait on External Event |
+| `0x90` | Device Busy/Device Post |
+| `0x83` | Keyboard Intercept |
+| `0x86` | Wait or Sleep |
+| `0x4F` | System Shutdown |
+| `0x53` | APM Installation Check |
+| `0x5300` | APM BIOS Connect |
+| `0x5301` | APM Disable |
+| `0x5302` | APM Enable |
+| `0x5303` | APM Set Power State |
 
----
+### Get Extended Memory Size
 
-### **Set Video Mode** - `AH=00h`
+This function retrieves the size of extended memory available on the system, which is memory above the first 1 MB in Real Mode. It is commonly used to detect available extended memory (above 1 MB) for applications or operating systems that require it.
 
-This function sets the display mode (text or graphics) and initializes the video display. Each video mode determines the number of characters or pixels that can be displayed on the screen, as well as the colors supported.
+#### Remarks
+This function returns the size of extended memory in kilobytes. It can be called on systems with at least 286 CPUs. Be aware that this function does not consider memory-mapped devices, so the actual available memory may vary slightly from what is reported.
 
-#### Parameters:
-- **AH** = `00h` (Function identifier)
-- **AL** = Video mode number
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x88` to get extended memory size. |
 
-#### Video Mode Values (AL):
-| **Mode** | **Description**                  |
-|----------|----------------------------------|
-| `00h`    | 40x25 text mode, 16 colors       |
-| `01h`    | 40x25 text mode, monochrome      |
-| `02h`    | 80x25 text mode, 16 colors       |
-| `03h`    | 80x25 text mode, monochrome      |
-| `04h`    | 320x200 graphics mode, 4 colors  |
-| `05h`    | 320x200 graphics mode, monochrome|
-| `06h`    | 640x200 graphics mode, monochrome|
-| `07h`    | 80x25 text mode, monochrome (CGA-compatible) |
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ax` | Extended memory size in kilobytes (KB). |
 
-#### Returns:
-- None.
+#### Example
+This example shows how to retrieve the size of extended memory and store the result in `%ax`.
 
-#### Example (AT&T Syntax):
 ```asm
-movb $0x00, %ah        # Set function: Set video mode
-movb $0x03, %al        # Mode 03h: 80x25 text mode, monochrome
-int $0x10              # Call BIOS video interrupt
+movb $0x88, %ah     # Set function code for 'Get Extended Memory Size'
+int $0x15           # Call BIOS system services
+# Result: %ax contains the extended memory size in KB
 ```
 
-This example sets the display to **80x25 text mode**, using monochrome display settings.
-
 ---
 
-### **Set Cursor Shape** - `AH=01h`
+### Move Block in Extended Memory (286+)
 
-This function sets the shape of the cursor by defining its start and end scan lines. This is particularly useful for customizing the appearance of the text cursor.
+This function moves a block of data in extended memory, primarily used on 286+ processors. It provides a way to manipulate large data structures or buffer memory in systems with extended memory.
 
-#### Parameters:
-- **AH** = `01h` (Function identifier)
-- **CH** = Cursor start line (0-31, topmost scan line of the cursor)
-- **CL** = Cursor end line (0-31, bottommost scan line of the cursor)
+#### Remarks
+Be sure to set up the source and destination addresses properly to avoid memory corruption. It is also crucial that the memory regions do not overlap, as this function does not handle overlapping memory blocks gracefully.
 
-#### Returns:
-- None.
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x87` for moving a block in extended memory. |
+| `%cx` | Number of words (16-bit) to move. |
+| `%ds:%si` | Source address of the block in extended memory. |
+| `%es:%di` | Destination address in extended memory. |
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no specific return values for this function, but ensure proper memory handling to avoid unexpected behavior.
+
+#### Example
+This example moves a block of 64 words from the source address stored in `%ds:%si` to the destination `%es:%di` in extended memory.
+
 ```asm
-movb $0x01, %ah        # Set function: Set cursor shape
-movb $0x06, %ch        # Cursor start at scan line 6
-movb $0x07, %cl        # Cursor end at scan line 7
-int $0x10              # Call BIOS video interrupt
+movb $0x87, %ah     # Set function code for 'Move Block in Extended Memory'
+movw $0x40, %cx     # Move 64 words
+movw $src_seg, %ds  # Set source segment in extended memory
+movw $src_off, %si  # Set source offset in extended memory
+movw $dst_seg, %es  # Set destination segment in extended memory
+movw $dst_off, %di  # Set destination offset in extended memory
+int $0x15           # Call BIOS system services
 ```
 
-In this example, the cursor is set to a block that covers scan lines 6 to 7, giving it a custom size.
-
 ---
 
-### **Set Cursor Position** - `AH=02h`
+### Get System Configuration Parameters
 
-This function sets the position of the text cursor on the screen.
+This function retrieves system configuration parameters such as memory sizes, DMA availability, and other hardware configurations. It is useful for system diagnostics or configuration checks.
 
-#### Parameters:
-- **AH** = `02h` (Function identifier)
-- **BH** = Page number (0 for most single-page modes)
-- **DH** = Row (Y-position)
-- **DL** = Column (X-position)
+#### Remarks
+This function is considered obsolete on modern systems. It may return useful data on older legacy systems, but it has largely been replaced by more advanced hardware configuration mechanisms like ACPI.
 
-#### Returns:
-- None.
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0xC0` to get system configuration parameters. |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%bx` | Model information of the system. |
+| `%cx` | Sub-model or hardware feature information. |
+| `%dx` | BIOS revision number. |
+
+#### Example
+This example retrieves system configuration parameters and stores them in `%bx`, `%cx`, and `%dx`.
+
 ```asm
-movb $0x02, %ah        # Set function: Set cursor position
-movb $0x00, %bh        # Page number 0
-movb $0x05, %dh        # Set cursor row to 5
-movb $0x10, %dl        # Set cursor column to 16
-int $0x10              # Call BIOS video interrupt
+movb $0xC0, %ah     # Set function code for 'Get System Configuration Parameters'
+int $0x15           # Call BIOS system services
+# Result: %bx contains the model, %cx contains sub-model, and %dx contains BIOS revision
 ```
 
-This sets the cursor to row 5, column 16 on the screen.
-
 ---
 
-### **Get Cursor Position** - `AH=03h`
+### Wait on External Event
 
-This function retrieves the current position and shape of the text cursor.
+This function waits for an external event such as hardware signals, DMA completion, or other external triggers. It can be useful in synchronous systems or when direct hardware communication is necessary.
 
-#### Parameters:
-- **AH** = `03h` (Function identifier)
-- **BH** = Page number (0 for most single-page modes)
+#### Remarks
+Use this function with caution, as it will halt the CPU until the external event occurs. This can lead to poor performance if used excessively or incorrectly. Ensure that the event you are waiting for will occur, or the system may hang indefinitely.
 
-#### Returns:
-- **CH** = Cursor start line (cursor shape start)
-- **CL** = Cursor end line (cursor shape end)
-- **DH** = Row (current cursor Y-position)
-- **DL** = Column (current cursor X-position)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x41` to wait on an external event. |
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no specific return values, but the function returns once the event occurs.
+
+#### Example
+This example waits for an external event to complete.
+
 ```asm
-movb $0x03, %ah        # Set function: Get cursor position and shape
-movb $0x00, %bh        # Page number 0
-int $0x10              # Call BIOS video interrupt
-
-# Cursor position is now in %dh (row) and %dl (column)
+movb $0x41, %ah     # Set function code for 'Wait on External Event'
+int $0x15           # Call BIOS system services
+# Waits for the external event to occur
 ```
 
-This example retrieves the current cursor position and stores the row in `DH` and the column in `DL`.
-
 ---
 
-### **Write Character and Attribute at Cursor** - `AH=09h`
+### Device Busy/Device Post
 
-This function writes a character to the screen at the current cursor position, using the specified color attribute.
+This function signals to the BIOS that a device is busy or has finished its operation (device post). It is part of the BIOS device activity tracking system.
 
-#### Parameters:
-- **AH** = `09h` (Function identifier)
-- **AL** = ASCII value of the character to display
-- **BH** = Page number (0 for most single-page modes)
-- **BL** = Attribute (color for text modes)
-- **CX** = Number of times to write the character
+#### Remarks
+This function is often used in coordination with hardware devices like disk controllers or network cards. Be mindful of the device status to prevent race conditions.
 
-#### Color Attribute (BL) for Text Modes:
-- **High nibble** = Background color (0-7, 8-15 for blinking)
-- **Low nibble** = Foreground color (0-15)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x90` to indicate device busy or post. |
+| `%al` | Device code (specific to the hardware). |
 
-| **Foreground Color** | **Value (Low Nibble)** |
-|----------------------|-----------------------|
-| Black                | 0                     |
-| Blue                 | 1                     |
-| Green                | 2                     |
-| Cyan                 | 3                     |
-| Red                  | 4                     |
-| Magenta              | 5                     |
-| Brown                | 6                     |
-| Light Gray           | 7                     |
+#### Example
+This example signals that a device is busy.
 
-#### Returns:
-- None.
-
-#### Example (AT&T Syntax):
 ```asm
-movb $0x09, %ah        # Set function: Write character at cursor
-movb $'A', %al         # ASCII value for 'A'
-movb $0x00, %bh        # Page number 0
-movb $0x07, %bl        # Attribute: Light gray text on black background
-movw $0x01, %cx        # Write the character once
-int $0x10              # Call BIOS video interrupt
+movb $0x90, %ah     # Set function code for 'Device Busy/Device Post'
+movb $0x01, %al     # Device code (e.g., floppy drive)
+int $0x15           # Call BIOS system services
+# Floppy drive is marked as busy
 ```
 
-This example writes the letter 'A' at the current cursor position with light gray text on a black background.
+### Keyboard Intercept (INT 0x15 - Function 0x83)
+
+This function intercepts the keyboard input and provides a way to manipulate or control keystrokes before they are processed by the system. It can be used to capture specific key combinations or to modify keyboard behavior.
+
+#### Remarks
+This function is used in some older systems for key remapping or handling special key combinations. It provides low-level access to the keyboard, allowing you to intercept keypresses before they are passed to the operating system.
+
+#### Parameters
+There are no input parameters.
+
+#### Returns
+There are no direct return values, but the function allows interception of the keyboard stream.
+
+#### Example
+This function is system-dependent, and specific code examples for its usage depend on the context in which it is implemented.
 
 ---
 
-### **Write Character in TTY Mode** - `AH=0Eh`
+### Wait or Sleep (INT 0x15 - Function 0x86)
 
-This function writes a character to the screen at the current cursor position and automatically advances the cursor. It is commonly used for TTY-style output.
+This function provides a way to suspend execution for a specified period of time. It can be used to introduce delays or pauses in program execution.
 
-#### Parameters:
-- **AH** = `0Eh` (Function identifier)
-- **AL** = ASCII value of the character to display
-- **BH** = Page number (0 for most single-page modes)
-- **BL** = Current text attribute (in text modes)
+#### Remarks
+The delay is specified in microseconds, but the accuracy depends on the system's timer resolution. It is commonly used in situations where precise timing is required.
 
-#### Returns:
-- None.
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%cx:%dx` | Time to wait (in microseconds). |
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example suspends execution for 100,000 microseconds (0.1 seconds).
+
 ```asm
-movb $0x0E, %ah        # Set function: Write character in TTY mode
-movb $'H', %al         # ASCII value for 'H'
-int $0x10              # Call BIOS video interrupt
-
-movb $'i', %al         # ASCII value for 'i'
-int $0x10              # Write 'i'
+movb $0x86, %ah     # Set function code for 'Wait or Sleep'
+movw $0x0001, %cx   # Set high word of delay to 1
+movw $0x86A0, %dx   # Set low word of delay to 100,000 microseconds (0.1 seconds)
+int $0x15           # Call BIOS system service
+# Execution is delayed by 0.1 seconds
 ```
 
-This example writes "Hi" to the screen, with each character automatically advancing the cursor.
-
 ---
 
-### **Write String to Display** - `AH=13h`
+### System Shutdown (INT 0x15 - Function 0x4F)
 
-This function writes a string of characters to the screen starting at the current cursor position.
+This function attempts to shut down the system. It is part of the Advanced Power Management (APM) specification, and it instructs the BIOS to turn off the power to the system.
 
-#### Parameters:
-- **AH** = `13h` (Function identifier)
-- **AL** = Write mode (bit 0: update cursor, bit 1: write string in XOR mode)
-- **BH** = Page number (0 for most single-page modes)
-- **BL** = Attribute (color for text modes)
-- **CX** = Length of the string
-- **DL:SI** = Pointer to string in memory (segment:offset)
+#### Remarks
+Not all systems support this function. On older systems that do, it works by signaling the BIOS to power down the machine. Modern systems typically use ACPI for power management, and this function may not work as expected.
 
-#### Returns:
-- None.
+#### Parameters
+There are no input parameters.
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example attempts to shut down the system.
+
 ```asm
-movb $0x13, %ah        # Set function: Write string to display
-movb $0x01, %al        # Write mode: update cursor after writing
-movb $0x00, %bh        # Page number 0
-movb $0x07, %bl        # Attribute: Light gray text on black background
-movw $5, %cx           # Length of string to write
-
-lea msg, %si           # Load address of the string into SI
-int $0x10              # Call BIOS video interrupt
-
-msg:
-    .ascii "Hello"
+movb $0x4F, %ah     # Set function code for 'System Shutdown'
+int $0x15           # Call BIOS system service
+# If supported, the system shuts down
 ```
 
-This example writes the string "Hello" to the screen in text mode.
-
-
-
-Hier ist der nächste Abschnitt der Handbuchseite zu **INT 13h** – Disk Services. Diese Funktionen ermöglichen den Zugriff auf das Diskettenlaufwerk und die Festplatte, einschließlich Lesen, Schreiben und Abrufen von Disk-Informationen.
-
-
-## BIOS Disk Services (INT 13h)
-
-The **INT 13h** interrupt provides low-level disk services for reading, writing, and managing floppy disks and hard drives. These functions allow direct access to the disk hardware and are critical for bootloaders, operating systems, and system-level utilities.
-
 ---
 
-### **Reset Disk System** - `AH=00h`
+### APM Installation Check (INT 0x15 - Function 0x53)
 
-This function resets the specified disk drive and its controller. It is typically called before performing any disk operations to ensure that the drive is in a known state.
+This function checks if Advanced Power Management (APM) is installed on the system. It returns a signature and version number if APM is present.
 
-#### Parameters:
-- **AH** = `00h` (Function identifier)
-- **DL** = Drive number  
-  - `00h-7Fh`: Floppy disk (drive A: is `00h`, drive B: is `01h`)  
-  - `80h-FFh`: Hard disk (drive C: is `80h`, drive D: is `81h`)
+#### Remarks
+APM is an older power management standard, and while it is supported on legacy systems, modern systems typically use ACPI. If APM is installed, this function will return a signature indicating its presence.
 
-#### Returns:
-- **AH** = Status code (0 on success, non-zero on error)
+#### Parameters
+There are no input parameters.
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ax` | APM signature (`0x504D` for "PM"). |
+| `%bx` | APM version number. |
+
+#### Example
+This example checks if APM is installed on the system.
+
 ```asm
-movb $0x00, %ah        # Set function: Reset disk system
-movb $0x00, %dl        # Drive A:
-int $0x13              # Call BIOS disk interrupt
-
-jc error               # Jump to error handling if the carry flag is set
+movb $0x53, %ah     # Set function code for 'APM Installation Check'
+int $0x15           # Call BIOS system service
+cmpw $0x504D, %ax   # Check if APM signature is present
+je apm_installed    # Jump if APM is installed
+apm_installed:
+# APM is installed
 ```
 
-In this example, the floppy drive (drive A:) is reset, and any errors can be handled by checking the carry flag (`CF`).
-
 ---
 
-### **Read Sectors from Disk** - `AH=02h`
+### APM BIOS Connect (INT 0x15 - Function 0x5300)
 
-This function reads one or more sectors from a disk into memory.
+This function connects the operating system to the APM BIOS, enabling APM features such as power state management and system standby.
 
-#### Parameters:
-- **AH** = `02h` (Function identifier)
-- **AL** = Number of sectors to read (1-255)
-- **CH** = Track number (cylinder number, bits 0-7)
-- **CL** = Sector number (bits 0-5), and bits 6-7 of the cylinder number (in bits 6-7 of CL)
-- **DH** = Head number
-- **DL** = Drive number (`00h` = Floppy, `80h` = Hard drive)
-- **ES:BX** = Pointer to the memory buffer where data is stored (segment:offset)
+#### Remarks
+This function must be called before any other APM functions. It initializes communication between the operating system and the APM BIOS.
 
-#### Returns:
-- **AH** = Status code (0 on success, non-zero on error)
-- **CF** = Set on error
+#### Parameters
+There are no input parameters.
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example connects the system to the APM BIOS.
+
 ```asm
-movb $0x02, %ah        # Set function: Read sectors from disk
-movb $0x01, %al        # Read 1 sector
-movb $0x00, %ch        # Cylinder 0 (track 0)
-movb $0x01, %cl        # Sector 1
-movb $0x00, %dh        # Head 0
-movb $0x00, %dl        # Drive A:
-movw $0x1000, %bx      # Load address 0x1000 for buffer
-movw $0x0000, %es      # Set ES segment to 0
-int $0x13              # Call BIOS disk interrupt
-
-jc error               # Jump to error handling if the carry flag is set
+movb $0x53, %ah     # Set function code for 'APM BIOS Connect'
+movb $0x00, %al     # Subfunction for 'Connect'
+int $0x15           # Call BIOS system service
+# APM BIOS is now connected
 ```
 
-In this example, one sector is read from **cylinder 0, head 0, sector 1** of the floppy disk into memory at `0x1000:0x0000`.
-
 ---
 
-### **Write Sectors to Disk** - `AH=03h`
+### APM Disable (INT 0x15 - Function 0x5301)
 
-This function writes one or more sectors from memory to a disk.
+This function disables APM on the system, effectively turning off all APM features.
 
-#### Parameters:
-- **AH** = `03h` (Function identifier)
-- **AL** = Number of sectors to write (1-255)
-- **CH** = Track number (cylinder number, bits 0-7)
-- **CL** = Sector number (bits 0-5), and bits 6-7 of the cylinder number (in bits 6-7 of CL)
-- **DH** = Head number
-- **DL** = Drive number (`00h` = Floppy, `80h` = Hard drive)
-- **ES:BX** = Pointer to the memory buffer containing the data to write (segment:offset)
+#### Remarks
+Once APM is disabled, the system will no longer manage power states such as standby or suspend. Use this function if power management needs to be controlled manually or via a different method.
 
-#### Returns:
-- **AH** = Status code (0 on success, non-zero on error)
-- **CF** = Set on error
+#### Parameters
+There are no input parameters.
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example disables APM.
+
 ```asm
-movb $0x03, %ah        # Set function: Write sectors to disk
-movb $0x01, %al        # Write 1 sector
-movb $0x00, %ch        # Cylinder 0 (track 0)
-movb $0x01, %cl        # Sector 1
-movb $0x00, %dh        # Head 0
-movb $0x00, %dl        # Drive A:
-movw $0x1000, %bx      # Load address 0x1000 for buffer
-movw $0x0000, %es      # Set ES segment to 0
-int $0x13              # Call BIOS disk interrupt
-
-jc error               # Jump to error handling if the carry flag is set
+movb $0x53, %ah     # Set function code for 'APM Disable'
+movb $0x01, %al     # Subfunction for 'Disable'
+int $0x15           # Call BIOS system service
+# APM is now disabled
 ```
 
-This example writes one sector of data from memory (starting at `0x1000:0x0000`) to the disk at **cylinder 0, head 0, sector 1**.
-
 ---
 
-### **Get Drive Parameters** - `AH=08h`
+### APM Enable (INT 0x15 - Function 0x5302)
 
-This function retrieves the parameters of the specified drive, including the number of cylinders, heads, and sectors per track. These parameters define the disk geometry.
+This function enables APM on the system, allowing the BIOS to manage power states such as standby and suspend.
 
-#### Parameters:
-- **AH** = `08h` (Function identifier)
-- **DL** = Drive number (`00h` = Floppy, `80h` = Hard drive)
+#### Remarks
+Once APM is enabled, the BIOS will automatically manage power states. This function is used to re-enable APM after it has been disabled.
 
-#### Returns:
-- **AH** = Status code (0 on success, non-zero on error)
-- **CH** = Number of cylinders (bits 0-7)
-- **CL** = Number of sectors per track (bits 0-5), upper bits of the cylinder (bits 6-7 of CL)
-- **DH** = Number of heads
-- **DL** = Number of drives
-- **ES:DI** = Pointer to disk type and size information (for hard drives)
+#### Parameters
+There are no input parameters.
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example enables APM.
+
 ```asm
-movb $0x08, %ah        # Set function: Get drive parameters
-movb $0x00, %dl        # Drive A:
-int $0x13              # Call BIOS disk interrupt
-
-jc error               # Jump to error handling if the carry flag is set
-
-# Now CH contains the number of cylinders, CL the number of sectors,
-# and DH the number of heads for the floppy disk.
+movb $0x53, %ah     # Set function code for 'APM Enable'
+movb $0x02, %al     # Subfunction for 'Enable'
+int $0x15           # Call BIOS system service
+# APM is now enabled
 ```
 
-This example retrieves the drive geometry for **Drive A:** (floppy disk).
-
 ---
 
-### **Extended Read (LBA)** - `AH=42h`
+### APM Set Power State (INT 0x15 - Function 0x5303)
 
-This function reads sectors from a hard drive using **Logical Block Addressing (LBA)**, which allows access to sectors on large drives that exceed the traditional CHS (Cylinder-Head-Sector) addressing limits.
+This function sets the power state of the system or a device (such as standby, suspend, or off).
 
-#### Parameters:
-- **AH** = `42h` (Function identifier)
-- **DL** = Drive number (`80h` = Hard drive)
-- **DS:SI** = Pointer to an **Extended Disk Address Packet (EDAP)** in memory, which specifies the LBA, number of sectors, and buffer location.
+#### Remarks
+APM power states allow the system to enter low-power modes such as standby or suspend. Use this function to manage power consumption on systems that support APM.
 
-#### Extended Disk Address Packet (EDAP) Structure:
-| **Offset** | **Description**                              |
-|------------|----------------------------------------------|
-| `00h`      | Size of the packet (10h or 18h bytes)        |
-| `01h`      | Reserved (should be 0)                       |
-| `02h`      | Number of sectors to read (16-bit)           |
-| `04h`      | Pointer to buffer (32-bit address in real mode) |
-| `08h`      | Starting LBA (64-bit value)                  |
-| `10h`      | Reserved (used in newer packet sizes)        |
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%bx` | Device ID (0 for system). |
+| `%cx` | Power state (see below). |
 
-#### Returns:
-- **AH** = Status code (0 on success, non-zero on error)
-- **CF** = Set on error
+##### Power States
+| Value | Description |
+| --- | --- |
+| `0x0000` | Standby |
+| `0x0001` | Suspend |
+| `0x0002` | Off |
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example puts the system into standby mode.
+
 ```asm
-movb $0x42, %ah        # Set function: Extended read (LBA)
-movb $0x80, %dl        # Hard drive (C:)
-lea edap, %si          # Load pointer to Extended Disk Address Packet
-movw $0x0000, %ds      # Set DS segment to 0
-int $0x13              # Call BIOS disk interrupt
-
-jc error               # Jump to error handling if the carry flag is set
-
-edap:
-    .byte 0x10         # Size of the packet (16 bytes)
-    .byte 0x00         # Reserved
-    .word 1            # Read 1 sector
-    .long 0x1000       # Buffer address at 0x1000
-    .quad 0            # Starting LBA (e.g., 0 for first sector)
+movb $0x53, %ah     # Set function code for 'APM Set Power State'
+movw $0x0000, %bx   # Set device ID to 0 (system)
+movw $0x0000, %cx   # Set power state to Standby
+int $0x15           # Call BIOS system service
+# The system enters standby mode
 ```
 
-In this example, **LBA 0** (the first sector) is read from the hard drive into the memory buffer at `0x1000:0x0000`.
+## INT 0x13 - Disk Services
 
-
-## BIOS Keyboard Services (INT 16h)
-
-The **INT 16h** interrupt provides services for interacting with the keyboard. These functions allow you to read characters, check for keypresses, and retrieve the status of modifier keys (e.g., Shift, Ctrl, Alt). **INT 16h** is essential for handling user input in low-level programs.
+| Function | Description |
+| --- | --- |
+| `0x00` | Reset Disk System |
+| `0x01` | Read Disk Status |
+| `0x02` | Read Sectors from Drive |
+| `0x03` | Write Sectors to Drive |
+| `0x04` | Verify Sectors |
+| `0x05` | Format Track |
+| `0x08` | Get Drive Parameters |
+| `0x15` | Get Drive Type |
+| `0x41` | Check Extensions Installation |
+| `0x42` | Extended Read Sectors |
+| `0x43` | Extended Write Sectors |
+| `0x44` | Verify Extended Sectors |
 
 ---
 
-### **Read Character from Keyboard (Blocking)** - `AH=00h`
+### Reset Disk System
 
-This function reads a character from the keyboard buffer. It waits (blocks) until a key is pressed and returns the ASCII value of the key (if applicable) and the scan code.
+This function resets the disk system, reinitializing the disk controller and drive. It is commonly used to recover from errors or prepare the system for new disk I/O operations.
 
-#### Parameters:
-- **AH** = `00h` (Function identifier)
+#### Remarks
+This function is essential for error handling in disk I/O. After a failed read or write operation, a disk reset may resolve the issue. However, use it cautiously as it might clear the current state of the drive or controller, requiring reinitialization of operations.
 
-#### Returns:
-- **AH** = Scan code of the key
-- **AL** = ASCII character code (if applicable, otherwise 0)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x00` to reset the disk system. |
+| `%dl` | Drive number (`0x00` for floppy drive A, `0x80` for the first hard drive). |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Status code (0 if successful, non-zero indicates an error). |
+
+#### Example
+This example resets the first hard drive (`0x80`).
+
 ```asm
-movb $0x00, %ah        # Set function: Read character from keyboard
-int $0x16              # Call BIOS keyboard interrupt
-
-# Now AH contains the scan code, and AL contains the ASCII code (if any)
+movb $0x00, %ah     # Set function code for 'Reset Disk System'
+movb $0x80, %dl     # Select first hard drive
+int $0x13           # Call BIOS disk services
+# If successful, the disk system is reset
 ```
 
-In this example, the system waits for a keypress. Once a key is pressed, the ASCII value of the key (if it has one) is returned in `AL`, and the scan code is returned in `AH`.
+---
+
+### Read Disk Status
+
+This function reads the status of the last disk operation. It is typically called after a failed disk I/O operation to diagnose the issue.
+
+#### Remarks
+This function is often used after a disk error to retrieve detailed status information. The status codes can indicate whether there was a failure with the drive, controller, or media.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x01` to read disk status. |
+
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Status code of the last disk operation. |
+
+#### Example
+This example reads the status of the last disk operation.
+
+```asm
+movb $0x01, %ah     # Set function code for 'Read Disk Status'
+int $0x13           # Call BIOS disk services
+# %ah contains the status code of the last disk operation
+```
 
 ---
 
-### **Check for Keypress (Non-blocking)** - `AH=01h`
+### Read Sectors from Drive
 
-This function checks if a key has been pressed but does not block the program. If a key is available, it returns the key's ASCII value and scan code. If no key is available, it clears the zero flag.
+This function reads one or more sectors from a specified disk drive into memory. It is essential for any program that needs to directly read data from a disk, such as an OS loader or file manager.
 
-#### Parameters:
-- **AH** = `01h` (Function identifier)
+#### Remarks
+When reading sectors, ensure the parameters (cylinder, head, and sector) are within valid ranges for the drive. If reading from a floppy disk, be cautious of the sector size and track layout.
 
-#### Returns:
-- **ZF** = Set if no key is available
-- **AH** = Scan code of the key (if pressed)
-- **AL** = ASCII character code (if applicable, otherwise 0)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x02` to read sectors. |
+| `%al` | Number of sectors to read (must be between 1 and the maximum sectors per track). |
+| `%ch` | Cylinder number (high 8 bits of the cylinder). |
+| `%cl` | Sector number (lower 6 bits of the sector, high 2 bits of the cylinder). |
+| `%dh` | Head number (0-based). |
+| `%dl` | Drive number (`0x00` for floppy A, `0x80` for the first hard drive). |
+| `%es:%bx` | Memory segment:offset to store the data. |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Status code (0 if successful, non-zero indicates an error). |
+
+#### Example
+This example reads one sector from the first hard drive into memory at segment `0x0000` and offset `0x7C00` (typically used by bootloaders).
+
 ```asm
-movb $0x01, %ah        # Set function: Check for keypress
-int $0x16              # Call BIOS keyboard interrupt
+movb $0x02, %ah     # Set function code for 'Read Sectors from Drive'
+movb $0x01, %al     # Read 1 sector
+movb $0x00, %ch     # Cylinder 0
+movb $0x01, %cl     # Sector 1
+movb $0x00, %dh     # Head 0
+movb $0x80, %dl     # First hard drive
+movw $0x0000, %es   # Segment for data
+movw $0x7C00, %bx   # Offset for data (standard bootloader location)
+int $0x13           # Call BIOS disk services
+# Reads the first sector of the first hard drive into memory
+```
 
-jz no_key              # Jump if no key is pressed (ZF is set)
+---
 
-# If a key was pressed, AH contains the scan code and AL contains the ASCII code
+### Write Sectors to Drive
+
+This function writes one or more sectors from memory to the specified disk drive. It is often used in disk imaging, creating filesystems, or other low-level disk operations.
+
+#### Remarks
+Ensure that the destination on the disk is valid and does not overwrite important data unless intended. Improper use of this function can lead to data corruption or system instability.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x03` to write sectors. |
+| `%al` | Number of sectors to write. |
+| `%ch` | Cylinder number. |
+| `%cl` | Sector number. |
+| `%dh` | Head number. |
+| `%dl` | Drive number. |
+| `%es:%bx` | Memory segment:offset from where the data will be written. |
+
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Status code (0 if successful, non-zero indicates an error). |
+
+#### Example
+This example writes one sector from memory at `0x7C00` to the first sector of the first hard drive.
+
+```asm
+movb $0x03, %ah     # Set function code for 'Write Sectors to Drive'
+movb $0x01, %al     # Write 1 sector
+movb $0x00, %ch     # Cylinder 0
+movb $0x01, %cl     # Sector 1
+movb $0x00, %dh     # Head 0
+movb $0x80, %dl     # First hard drive
+movw $0x0000, %es   # Segment where data is stored
+movw $0x7C00, %bx   # Offset where data is stored
+int $0x13           # Call BIOS disk services
+# Writes the data from memory into the first sector of the hard drive
+```
+
+---
+
+### Verify Sectors
+
+This function verifies the integrity of one or more sectors on the specified disk. It reads the sectors and checks if they are readable without transferring the data to memory.
+
+#### Remarks
+This function is useful for verifying that the media is readable without actually reading data into memory. It can be used as part of a disk integrity check.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x04` to verify sectors. |
+| `%al` | Number of sectors to verify. |
+| `%ch` | Cylinder number. |
+| `%cl` | Sector number. |
+| `%dh` | Head number. |
+| `%dl` | Drive number. |
+
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Status code (0 if successful, non-zero indicates an error). |
+
+#### Example
+This example verifies one sector on the first hard drive.
+
+```asm
+movb $0x04, %ah     # Set function code for 'Verify Sectors'
+movb $0x01, %al     # Verify 1 sector
+movb $0x00, %ch     # Cylinder 0
+movb $0x01, %cl     # Sector 1
+movb $0x00, %dh     # Head 0
+movb $0x80, %dl     # First hard drive
+int $0x13           # Call BIOS disk services
+# Verifies the first sector of the hard drive
+```
+
+
+## INT 0x10 - Video Services
+
+| Function | Description |
+| --- | --- |
+| `0x00` | Set Video Mode |
+| `0x01` | Set Cursor Type |
+| `0x02` | Set Cursor Position |
+| `0x03` | Get Cursor Position and Size |
+| `0x04` | Read Light Pen Position |
+| `0x05` | Set Active Display Page |
+| `0x06` | Scroll Up Window |
+| `0x07` | Scroll Down Window |
+| `0x08` | Read Character and Attribute at Cursor Position |
+| `0x09` | Write Character and Attribute at Cursor Position |
+| `0x0A` | Write Character Only at Cursor Position |
+| `0x0B` | Set Background/Border Color |
+| `0x0E` | Write Character in Teletype Mode |
+| `0x13` | Write String |
+
+---
+
+### Set Video Mode
+
+This function sets the video mode of the display. It is used to switch between different text and graphics modes supported by the video hardware. Common modes include text mode (e.g., 80x25) and various graphics modes.
+
+#### Remarks
+Switching video modes will clear the screen, so all currently displayed data will be lost. Make sure to save any important screen data before calling this function. Also, certain video modes may not be supported by all hardware, so ensure compatibility with the display adapter.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x00` for setting video mode. |
+| `%al` | Video mode number, specifying the mode to be set. |
+
+##### Video Mode Values
+Common video modes supported by the BIOS:
+| Value | Description |
+| --- | --- |
+| `0x03` | 80x25 text mode, 16 colors. |
+| `0x13` | 320x200 graphics mode, 256 colors. |
+
+#### Returns
+There are no return values for this function.
+
+#### Example
+This example sets the video mode to 80x25 text mode.
+
+```asm
+movb $0x00, %ah     # Set video mode function
+movb $0x03, %al     # 80x25 text mode
+int $0x10           # Call BIOS video service
+# The display is now in 80x25 text mode
+```
+
+---
+
+### Set Cursor Type
+
+This function sets the shape of the text cursor by defining the starting and ending scan lines. It is useful for making the cursor more or less visible depending on the application.
+
+#### Remarks
+Ensure that the cursor type matches the current display mode. Some cursor shapes may not be appropriate for graphics modes, and improperly setting the cursor could result in display artifacts.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x01` for setting cursor type. |
+| `%ch` | Cursor start line (lower part of the cursor). |
+| `%cl` | Cursor end line (upper part of the cursor). |
+
+#### Returns
+There are no return values.
+
+#### Example
+This example sets a block cursor in 80x25 text mode by setting the start line to 0 and the end line to 15.
+
+```asm
+movb $0x01, %ah     # Set cursor type function
+movb $0x00, %ch     # Start at scan line 0 (top of the block)
+movb $0x0F, %cl     # End at scan line 15 (bottom of the block)
+int $0x10           # Call BIOS video service
+# The cursor is now a solid block
+```
+
+---
+
+### Set Cursor Position
+
+This function sets the position of the text-mode cursor on the screen. It is commonly used to move the cursor to a specific location before writing characters.
+
+#### Remarks
+Cursor positions are 0-based, so the top-left corner of the screen corresponds to position (0, 0). Be sure that the cursor is set within the bounds of the display area to avoid display errors.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x02` for setting cursor position. |
+| `%bh` | Page number (used for multi-page displays, usually `0x00` for single-page displays). |
+| `%dh` | Row (Y position). |
+| `%dl` | Column (X position). |
+
+#### Returns
+There are no return values.
+
+#### Example
+This example moves the cursor to row 10, column 20 on the screen.
+
+```asm
+movb $0x02, %ah     # Set cursor position function
+movb $0x00, %bh     # Page 0
+movb $0x0A, %dh     # Row 10
+movb $0x14, %dl     # Column 20
+int $0x10           # Call BIOS video service
+# The cursor is now at row 10, column 20
+```
+
+---
+
+### Get Cursor Position and Size
+
+This function retrieves the current cursor position and size. It is useful when you need to store the current cursor location before moving it or changing the display.
+
+#### Remarks
+This function returns both the cursor's location (row and column) and its shape (start and end scan lines), which are useful for restoring the display later.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x03` for getting cursor position and size. |
+| `%bh` | Page number (usually `0x00` for single-page displays). |
+
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ch` | Cursor start scan line. |
+| `%cl` | Cursor end scan line. |
+| `%dh` | Row (Y position of the cursor). |
+| `%dl` | Column (X position of the cursor). |
+
+#### Example
+This example retrieves the current cursor position and size for page 0.
+
+```asm
+movb $0x03, %ah     # Get cursor position and size function
+movb $0x00, %bh     # Page 0
+int $0x10           # Call BIOS video service
+# The current cursor start scan line is in %ch, end scan line in %cl
+# The cursor's position is stored in %dh (row) and %dl (column)
+```
+
+---
+
+### Read Light Pen Position
+
+This function returns the light pen position on the screen. It was used with older input devices like light pens, which are mostly obsolete today.
+
+#### Remarks
+This function is mostly obsolete, as light pens are no longer common input devices. It may not return valid data on modern hardware.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x04` for reading light pen position. |
+
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Status code (`0x00` if light pen trigger was pressed, `0x01` if not). |
+| `%cx` | Column (X position of light pen). |
+| `%dx` | Row (Y position of light pen). |
+
+#### Example
+This example retrieves the light pen position.
+
+```asm
+movb $0x04, %ah     # Read light pen position function
+int $0x10           # Call BIOS video service
+# The position is stored in %cx (column) and %dx (row)
+# %ah contains the status of the light pen trigger
+```
+
+---
+
+### Set Active Display Page
+
+This function sets the active display page in text mode. In some modes, multiple display pages can be used to store different screen contents, and this function allows switching between them.
+
+#### Remarks
+Switching display pages is useful for double-buffering in text mode or for quickly displaying different content without rewriting the entire screen.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x05` for setting active display page. |
+| `%al` | Page number (0-based). |
+
+#### Returns
+There are no return values.
+
+#### Example
+This example switches to display page 1.
+
+```asm
+movb $0x05, %ah     # Set active display page function
+movb $0x01, %al     # Switch to page 1
+int $0x10           # Call BIOS video service
+# The display switches to page 1
+```
+
+## INT 0x16 - Keyboard Services
+
+| Function | Description |
+| --- | --- |
+| `0x00` | Read Character from Keyboard Buffer |
+| `0x01` | Check for Keystroke (Non-blocking) |
+| `0x02` | Get Keyboard Shift Flags |
+| `0x05` | Store Keystroke in Keyboard Buffer |
+| `0x10` | Get Extended Keystroke (for AT/PS2 keyboards) |
+| `0x11` | Check for Extended Keystroke (for AT/PS2 keyboards) |
+
+---
+
+### Read Character from Keyboard Buffer
+
+This function reads a character from the keyboard buffer. If no keystroke is available, it waits until a key is pressed, making it a blocking function.
+
+#### Remarks
+This function returns both the ASCII code and the scan code of the key that was pressed. The function will block (wait) until a key is pressed, so use it carefully if you need non-blocking behavior.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x00` to read a character from the keyboard buffer. |
+
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%al` | ASCII code of the key pressed (0 if a special key, like function keys). |
+| `%ah` | Scan code of the key pressed. |
+
+#### Example
+This example reads a key from the keyboard and stores the ASCII code in `%al` and the scan code in `%ah`.
+
+```asm
+movb $0x00, %ah     # Set function code for 'Read Character from Keyboard Buffer'
+int $0x16           # Call BIOS keyboard service
+# The ASCII code is stored in %al, scan code in %ah
+```
+
+---
+
+### Check for Keystroke (Non-blocking)
+
+This function checks whether a keystroke is available in the keyboard buffer. Unlike function `0x00`, this function does not block if no keystroke is available. If a key has been pressed, it returns the key without waiting.
+
+#### Remarks
+This is a non-blocking function, making it useful when you need to check for key input without halting the program. If no key has been pressed, the Zero Flag (ZF) will be set.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x01` to check for keystroke. |
+
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%al` | ASCII code of the key (if available). |
+| `%ah` | Scan code of the key (if available). |
+
+##### Zero Flag
+| Value | Description |
+| --- | --- |
+| `ZF=1` | No keystroke available. |
+| `ZF=0` | Keystroke is available. |
+
+#### Example
+This example checks if a key has been pressed and retrieves its value if available.
+
+```asm
+movb $0x01, %ah     # Set function code for 'Check for Keystroke'
+int $0x16           # Call BIOS keyboard service
+jz no_key           # If ZF is set, no key is pressed
+# The ASCII code is stored in %al, scan code in %ah
 no_key:
-# Handle no key pressed
+# No key was pressed
 ```
-
-In this example, the system checks for a keypress without blocking. If no key is available, the zero flag is set, and the program jumps to the `no_key` label.
 
 ---
 
-### **Get Keyboard Shift Status** - `AH=02h`
+### Get Keyboard Shift Flags
 
-This function retrieves the current status of the keyboard's shift, control, alt, and toggle keys (e.g., Caps Lock, Num Lock). The result is returned in the **AL** register, where each bit represents the state of a specific key.
+This function retrieves the current status of the keyboard shift flags (e.g., Shift, Ctrl, Alt, Caps Lock, Num Lock). It can be used to check the current state of modifier keys and lock keys.
 
-#### Parameters:
-- **AH** = `02h` (Function identifier)
+#### Remarks
+This function does not consume a keystroke from the keyboard buffer; it simply returns the status of the keyboard shift flags.
 
-#### Returns:
-- **AL** = Shift status byte  
-  | **Bit** | **Description**                     |
-  |---------|-------------------------------------|
-  | `0`     | Right Shift pressed                 |
-  | `1`     | Left Shift pressed                  |
-  | `2`     | Ctrl pressed                        |
-  | `3`     | Alt pressed                         |
-  | `4`     | Scroll Lock active                  |
-  | `5`     | Num Lock active                     |
-  | `6`     | Caps Lock active                    |
-  | `7`     | Insert active                       |
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x02` to get keyboard shift flags. |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%al` | Keyboard shift flag status (bitmask). |
+
+##### Shift Flag Bitmask
+| Bit | Flag Description |
+| --- | --- |
+| `0` | Right Shift pressed |
+| `1` | Left Shift pressed |
+| `2` | Ctrl pressed |
+| `3` | Alt pressed |
+| `4` | Scroll Lock active |
+| `5` | Num Lock active |
+| `6` | Caps Lock active |
+| `7` | Insert mode active |
+
+#### Example
+This example retrieves the keyboard shift flags and checks if Caps Lock is active.
+
 ```asm
-movb $0x02, %ah        # Set function: Get keyboard shift status
-int $0x16              # Call BIOS keyboard interrupt
-
-# Now AL contains the shift status
-testb $0x01, %al       # Check if Right Shift is pressed
-jz no_shift            # Jump if Right Shift is not pressed
+movb $0x02, %ah     # Set function code for 'Get Keyboard Shift Flags'
+int $0x16           # Call BIOS keyboard service
+testb $0x40, %al    # Test if the Caps Lock bit (bit 6) is set
+jnz caps_on         # If set, Caps Lock is active
+caps_on:
+# Caps Lock is active
 ```
-
-In this example, the keyboard shift status is retrieved, and the right Shift key status (bit 0) is checked. If the right Shift key is pressed, the code continues; otherwise, it jumps to `no_shift`.
 
 ---
 
-### **Get Extended Keyboard Keystroke (Enhanced Keyboards)** - `AH=10h`
+### Store Keystroke in Keyboard Buffer
 
-This function is used for enhanced keyboards (such as the 101/102-key keyboards). It reads a keystroke from the buffer and returns the scan code and ASCII code for the key, similar to `AH=00h`, but it also handles extended keys.
+This function manually stores a keystroke in the keyboard buffer. It is useful for simulating keypresses programmatically, such as for automated testing or key macros.
 
-#### Parameters:
-- **AH** = `10h` (Function identifier)
+#### Remarks
+Ensure that the keyboard buffer has space for the new keystroke. If the buffer is full, the function may fail without reporting an error.
 
-#### Returns:
-- **AH** = Scan code of the key (including extended keys)
-- **AL** = ASCII character code (if applicable, otherwise 0)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x05` to store a keystroke. |
+| `%ch` | Scan code of the key to be stored. |
+| `%cl` | ASCII code of the key to be stored. |
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example stores a simulated keystroke for the 'A' key in the keyboard buffer.
+
 ```asm
-movb $0x10, %ah        # Set function: Get extended keystroke
-int $0x16              # Call BIOS keyboard interrupt
-
-# Now AH contains the scan code (including extended keys), AL contains the ASCII code (if any)
+movb $0x05, %ah     # Set function code for 'Store Keystroke in Buffer'
+movb $0x1E, %ch     # Scan code for 'A' key
+movb $0x41, %cl     # ASCII code for 'A' key
+int $0x16           # Call BIOS keyboard service
+# 'A' is now stored in the keyboard buffer
 ```
-
-This example reads a keypress, including the extended keys, from an enhanced keyboard.
 
 ---
 
-### **Get Extended Keyboard Shift Status (Enhanced Keyboards)** - `AH=11h`
+### Get Extended Keystroke (for AT/PS2 keyboards)
 
-This function retrieves the status of shift keys, control keys, and toggle keys on enhanced keyboards. It works similarly to `AH=02h` but provides additional information for extended keyboards.
+This function reads an extended keystroke from the keyboard buffer. It supports extended keys on AT and PS/2 keyboards, which have more keys than the original IBM PC/XT keyboards.
 
-#### Parameters:
-- **AH** = `11h` (Function identifier)
+#### Remarks
+This function is similar to `0x00` but supports extended key codes from modern keyboards. It will block until a keystroke is available, making it a blocking call.
 
-#### Returns:
-- **AL** = Shift status byte (same as `AH=02h`)
-- **AH** = Extended shift status byte  
-  | **Bit** | **Description**                     |
-  |---------|-------------------------------------|
-  | `0`     | Insert key is pressed               |
-  | `1`     | Alt Gr pressed (Right Alt)          |
-  | `2`     | Ctrl pressed                        |
-  | `3`     | Alt pressed                         |
-  | `4`     | Scroll Lock active                  |
-  | `5`     | Num Lock active                     |
-  | `6`     | Caps Lock active                    |
-  | `7`     | SysReq key pressed                  |
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x10` to get extended keystroke. |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%al` | ASCII code of the key pressed (if applicable). |
+| `%ah` | Scan code of the key pressed (including extended codes). |
+
+#### Example
+This example reads an extended keystroke and stores the ASCII and scan codes.
+
 ```asm
-movb $0x11, %ah        # Set function: Get extended shift status
-int $0x16              # Call BIOS keyboard interrupt
-
-# Now AL contains the basic shift status, and AH contains the extended shift status
-testb $0x02, %ah       # Check if Alt Gr is pressed
-jz no_altgr            # Jump if Alt Gr is not pressed
+movb $0x10, %ah     # Set function code for 'Get Extended Keystroke'
+int $0x16           # Call BIOS keyboard service
+# The ASCII code is stored in %al, scan code (including extended) in %ah
 ```
-
-In this example, the extended shift status is retrieved, and the Alt Gr key status (bit 1 of AH) is checked.
-
-
-
-
-## BIOS Printer Services (INT 17h)
-
-The **INT 17h** interrupt provides services for sending data to a printer connected via a parallel port (LPT1, LPT2, etc.). It allows low-level control of printing operations, including sending characters, initializing the printer, and retrieving printer status information.
 
 ---
 
-### **Send Character to Printer** - `AH=00h`
+### Check for Extended Keystroke (Non-blocking, for AT/PS2 keyboards)
 
-This function sends a single character to the specified printer. The printer must be connected to a parallel port (typically LPT1).
+This function checks for an extended keystroke without blocking. It is useful for handling input from modern keyboards with extended keysets without waiting for input.
 
-#### Parameters:
-- **AH** = `00h` (Function identifier)
-- **AL** = ASCII value of the character to send
-- **DX** = Printer port number  
-  - `00h`: LPT1  
-  - `01h`: LPT2  
-  - `02h`: LPT3  
+#### Remarks
+This is a non-blocking version of the extended keystroke read function. If no key has been pressed, the Zero Flag (ZF) will be set, and no values will be returned.
 
-#### Returns:
-- **AH** = Printer status  
-  | **Bit** | **Description**                        |
-  |---------|----------------------------------------|
-  | `0`     | 0 = No error, 1 = Printer busy         |
-  | `1`     | 0 = No error, 1 = Printer selected     |
-  | `2`     | 0 = No error, 1 = Paper out            |
-  | `3`     | 0 = No error, 1 = Printer acknowledges |
-  | `4`     | 0 = No error, 1 = Printer error        |
-  | `7`     | 0 = Operation successful, 1 = Timeout  |
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x11` to check for extended keystroke. |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%al` | ASCII code of the key (if available). |
+| `%ah` | Scan code of the key (if available). |
+
+##### Zero Flag
+| Value | Description |
+| --- | --- |
+| `ZF=1` | No keystroke available. |
+| `ZF=0` | Keystroke is available. |
+
+#### Example
+This example checks for an extended keystroke.
+
 ```asm
-movb $0x00, %ah        # Set function: Send character to printer
-movb $'H', %al         # ASCII value for 'H'
-movb $0x00, %dx        # Printer port LPT1
-int $0x17              # Call BIOS printer interrupt
-
-# Now AH contains the printer status
-testb $0x80, %ah       # Check if timeout occurred (bit 7)
-jnz error              # Jump if there was a timeout
+movb $0x11, %ah     # Set function code for 'Check for Extended Keystroke'
+int $0x16           # Call BIOS keyboard service
+jz no_key           # If ZF is set, no key is pressed
+# The ASCII code is stored in %al, scan code (including extended) in %ah
+no_key:
+# No key was pressed
 ```
 
-In this example, the character 'H' is sent to the printer connected to LPT1. The status of the printer is returned in `AH`, and the program checks if there was a timeout (bit 7 of `AH`).
+
+## INT 0x17 - Parallel Port Services
+
+| Function | Description |
+| --- | --- |
+| `0x00` | Print a Character to Printer |
+| `0x01` | Initialize Printer |
+| `0x02` | Check Printer Status |
 
 ---
 
-### **Initialize Printer** - `AH=01h`
+### Print a Character to Printer
 
-This function initializes the specified printer by sending the necessary control signals to reset the printer and make it ready to receive data.
+This function sends a character to the printer connected to the parallel port. It waits until the printer is ready before sending the character, making it a blocking function.
 
-#### Parameters:
-- **AH** = `01h` (Function identifier)
-- **DX** = Printer port number  
-  - `00h`: LPT1  
-  - `01h`: LPT2  
-  - `02h`: LPT3  
+#### Remarks
+Make sure the printer is online and ready to receive data. The function will block until the printer is ready, so if the printer is offline or experiencing an error, it may cause the system to hang. Also, ensure that the parallel port is correctly initialized before using this function.
 
-#### Returns:
-- **AH** = Printer status (same format as `AH=00h`)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x00` to print a character to the printer. |
+| `%al` | ASCII character to be printed. |
+| `%dx` | Printer port number (usually `0x00` for LPT1, `0x01` for LPT2, and `0x02` for LPT3). |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Printer status (0 if successful, otherwise error code). |
+
+##### Printer Status Flags
+| Value | Description |
+| --- | --- |
+| `0x00` | Successful operation, printer is ready. |
+| `0x01` | Printer timeout (printer did not respond in time). |
+| `0x02` | Printer not selected (offline). |
+| `0x08` | I/O error occurred during communication with the printer. |
+
+#### Example
+This example prints the character 'A' to the printer connected to LPT1.
+
 ```asm
-movb $0x01, %ah        # Set function: Initialize printer
-movb $0x00, %dx        # Printer port LPT1
-int $0x17              # Call BIOS printer interrupt
-
-# Now AH contains the printer status
+movb $0x00, %ah     # Set function code for 'Print Character to Printer'
+movb $0x41, %al     # ASCII code for 'A'
+movb $0x00, %dx     # Select LPT1
+int $0x17           # Call BIOS parallel port service
+# The character 'A' is sent to the printer
 ```
-
-In this example, the printer connected to LPT1 is initialized. This ensures that the printer is ready to receive data after being powered on or reset.
 
 ---
 
-### **Get Printer Status** - `AH=02h`
+### Initialize Printer
 
-This function retrieves the current status of the specified printer. The status can indicate whether the printer is ready, if it is out of paper, or if there is a printer error.
+This function initializes the printer connected to the specified parallel port. It prepares the printer for receiving data and resets any error conditions.
 
-#### Parameters:
-- **AH** = `02h` (Function identifier)
-- **DX** = Printer port number  
-  - `00h`: LPT1  
-  - `01h`: LPT2  
-  - `02h`: LPT3  
+#### Remarks
+This function is typically called before sending data to the printer. It resets the printer and clears any existing errors, making it ready to receive further data.
 
-#### Returns:
-- **AH** = Printer status  
-  | **Bit** | **Description**                        |
-  |---------|----------------------------------------|
-  | `0`     | 0 = No error, 1 = Printer busy         |
-  | `1`     | 0 = No error, 1 = Printer selected     |
-  | `2`     | 0 = No error, 1 = Paper out            |
-  | `3`     | 0 = No error, 1 = Printer acknowledges |
-  | `4`     | 0 = No error, 1 = Printer error        |
-  | `7`     | 0 = Operation successful, 1 = Timeout  |
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x01` to initialize the printer. |
+| `%dx` | Printer port number (`0x00` for LPT1, `0x01` for LPT2, `0x02` for LPT3). |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Printer status after initialization. |
+
+##### Printer Status Flags
+| Value | Description |
+| --- | --- |
+| `0x00` | Successful initialization. |
+| `0x01` | Printer timeout (printer did not respond in time). |
+| `0x02` | Printer not selected (offline). |
+| `0x08` | I/O error occurred during initialization. |
+
+#### Example
+This example initializes the printer connected to LPT1.
+
 ```asm
-movb $0x02, %ah        # Set function: Get printer status
-movb $0x00, %dx        # Printer port LPT1
-int $0x17              # Call BIOS printer interrupt
-
-# Now AH contains the printer status
-testb $0x04, %ah       # Check if the printer is out of paper (bit 2)
-jnz out_of_paper       # Jump if printer is out of paper
+movb $0x01, %ah     # Set function code for 'Initialize Printer'
+movb $0x00, %dx     # Select LPT1
+int $0x17           # Call BIOS parallel port service
+# The printer connected to LPT1 is now initialized
 ```
-
-In this example, the status of the printer connected to LPT1 is retrieved. The program checks if the printer is out of paper by testing bit 2 of the status byte.
-
-
-
-## BIOS System Timer Services (INT 1Ah)
-
-The **INT 1Ah** interrupt provides services for accessing the system timer and the real-time clock (RTC). These functions are used to retrieve and set the system time, as well as to interact with the hardware clock. They are critical for system-level programs that need to manage time-based operations.
 
 ---
 
-### **Get System Time (Ticks Since Midnight)** - `AH=00h`
+### Check Printer Status
 
-This function retrieves the current system time in the form of ticks since midnight. The system timer ticks 18.2 times per second, so there are approximately 65,536 ticks per hour and 1,180,000 ticks per day.
+This function checks the status of the printer connected to the specified parallel port. It returns flags that indicate whether the printer is ready, offline, or experiencing an error.
 
-#### Parameters:
-- **AH** = `00h` (Function identifier)
+#### Remarks
+Use this function to check the printer's status before sending data or to diagnose communication issues. The status flags provide valuable information about the state of the printer, such as whether it's online, busy, or in an error state.
 
-#### Returns:
-- **CX:DX** = Number of ticks since midnight
-- **AL** = Number of overflow days (if the system has been running for more than 24 hours)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x02` to check the printer status. |
+| `%dx` | Printer port number (`0x00` for LPT1, `0x01` for LPT2, `0x02` for LPT3). |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Printer status flags. |
+
+##### Printer Status Flags
+| Bit | Description |
+| --- | --- |
+| `0` | Time-out occurred. |
+| `1` | Printer not selected (offline). |
+| `2` | Out of paper. |
+| `3` | Printer error. |
+| `4` | Printer is busy (cannot receive data). |
+| `5` | Printer is ready (able to receive data). |
+
+#### Example
+This example checks the status of the printer connected to LPT1 and verifies if the printer is ready.
+
 ```asm
-movb $0x00, %ah        # Set function: Get system time (ticks)
-int $0x1A              # Call BIOS system timer interrupt
-
-# Now CX:DX contains the number of ticks since midnight
-# AL contains the overflow days (if applicable)
+movb $0x02, %ah     # Set function code for 'Check Printer Status'
+movb $0x00, %dx     # Select LPT1
+int $0x17           # Call BIOS parallel port service
+testb $0x20, %ah    # Test if the printer is ready (bit 5)
+jnz printer_ready   # Jump if the printer is ready to receive data
+printer_ready:
+# The printer is ready to receive data
 ```
 
-In this example, the current system time (in ticks since midnight) is retrieved, and the overflow days are returned in `AL` if the system has been running for more than 24 hours.
+## INT 0x14 - Serial Port Services
+
+| Function | Description |
+| --- | --- |
+| `0x00` | Initialize Serial Port |
+| `0x01` | Transmit Character via Serial Port |
+| `0x02` | Receive Character via Serial Port |
+| `0x03` | Get Serial Port Status |
 
 ---
 
-### **Set System Time** - `AH=01h`
+### Initialize Serial Port
 
-This function sets the system time by specifying the number of ticks since midnight. The ticks should be passed in the **CX:DX** registers.
+This function initializes the specified serial port by setting the baud rate, parity, stop bits, and data length. It prepares the serial port for communication.
 
-#### Parameters:
-- **AH** = `01h` (Function identifier)
-- **CX:DX** = Number of ticks since midnight
+#### Remarks
+Before transmitting or receiving data, it is important to initialize the serial port with the desired communication parameters. If the serial port is not initialized properly, data transfer may result in incorrect or corrupted data.
 
-#### Returns:
-- None.
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x00` to initialize the serial port. |
+| `%al` | Communication parameters, which include baud rate, parity, stop bits, and data length (see below). |
+| `%dx` | Serial port number (`0x00` for COM1, `0x01` for COM2, etc.). |
 
-#### Example (AT&T Syntax):
+##### Communication Parameters (stored in `%al`)
+| Bit(s) | Description |
+| --- | --- |
+| `0-3` | Baud rate (see table below). |
+| `4`   | Parity (0 = none, 1 = even). |
+| `5`   | Stop bits (0 = 1 stop bit, 1 = 2 stop bits). |
+| `6-7` | Data length (0 = 8 bits, 1 = 7 bits). |
+
+##### Baud Rate Values
+| Value | Baud Rate |
+| --- | --- |
+| `0x00` | 110 baud |
+| `0x01` | 150 baud |
+| `0x02` | 300 baud |
+| `0x03` | 600 baud |
+| `0x04` | 1200 baud |
+| `0x05` | 2400 baud |
+| `0x06` | 4800 baud |
+| `0x07` | 9600 baud |
+
+#### Returns
+There are no return values.
+
+#### Example
+This example initializes COM1 with 9600 baud, no parity, 1 stop bit, and 8 data bits.
+
 ```asm
-movb $0x01, %ah        # Set function: Set system time (ticks)
-movw $0x1234, %cx      # Set the high word of the tick count
-movw $0x5678, %dx      # Set the low word of the tick count
-int $0x1A              # Call BIOS system timer interrupt
+movb $0x00, %ah     # Set function code for 'Initialize Serial Port'
+movb $0x07, %al     # 9600 baud, no parity, 1 stop bit, 8 data bits
+movb $0x00, %dx     # Select COM1
+int $0x14           # Call BIOS serial port service
+# COM1 is now initialized
 ```
-
-In this example, the system time is set to the specified tick count (`0x12345678` ticks since midnight).
 
 ---
 
-### **Get Real-Time Clock Time** - `AH=02h`
+### Transmit Character via Serial Port
 
-This function retrieves the current time from the real-time clock (RTC), which is a battery-powered clock that keeps track of the time even when the system is powered off.
+This function transmits a character through the specified serial port. It waits until the serial port is ready to send data, making it a blocking function.
 
-#### Parameters:
-- **AH** = `02h` (Function identifier)
+#### Remarks
+Make sure the serial port is initialized before attempting to transmit data. The function will block until the serial port is ready to send the character, so avoid using it in time-critical loops without proper consideration.
 
-#### Returns:
-- **CH** = Hours (BCD format)
-- **CL** = Minutes (BCD format)
-- **DH** = Seconds (BCD format)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x01` to transmit a character via serial port. |
+| `%al` | ASCII character to be transmitted. |
+| `%dx` | Serial port number (`0x00` for COM1, `0x01` for COM2, etc.). |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Status code (0 if successful, otherwise error code). |
+
+##### Serial Port Status Flags
+| Value | Description |
+| --- | --- |
+| `0x00` | Successful transmission. |
+| `0x01` | Timeout (serial port did not respond). |
+
+#### Example
+This example transmits the character 'A' via COM1.
+
 ```asm
-movb $0x02, %ah        # Set function: Get RTC time
-int $0x1A              # Call BIOS system timer interrupt
-
-# Now CH contains the hours, CL contains the minutes, and DH contains the seconds (all in BCD format)
+movb $0x01, %ah     # Set function code for 'Transmit Character via Serial Port'
+movb $0x41, %al     # ASCII code for 'A'
+movb $0x00, %dx     # Select COM1
+int $0x14           # Call BIOS serial port service
+# The character 'A' is sent through COM1
 ```
-
-In this example, the current time is retrieved from the RTC. The values are returned in **BCD format**, meaning each digit is stored in a separate nibble (e.g., 12:34:56 is returned as `12h:34h:56h`).
 
 ---
 
-### **Set Real-Time Clock Time** - `AH=03h`
+### Receive Character via Serial Port
 
-This function sets the time in the real-time clock (RTC) using the provided hours, minutes, and seconds in BCD format.
+This function receives a character from the specified serial port. It waits until a character is received, making it a blocking function.
 
-#### Parameters:
-- **AH** = `03h` (Function identifier)
-- **CH** = Hours (BCD format)
-- **CL** = Minutes (BCD format)
-- **DH** = Seconds (BCD format)
+#### Remarks
+Make sure the serial port is initialized before attempting to receive data. The function will block until a character is available, so use it cautiously in time-sensitive applications.
 
-#### Returns:
-- None.
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x02` to receive a character via serial port. |
+| `%dx` | Serial port number (`0x00` for COM1, `0x01` for COM2, etc.). |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%al` | ASCII code of the received character. |
+| `%ah` | Status code (0 if successful, otherwise error code). |
+
+##### Serial Port Status Flags
+| Value | Description |
+| --- | --- |
+| `0x00` | Successful reception. |
+| `0x01` | Timeout (no data received). |
+
+#### Example
+This example receives a character from COM1 and stores it in `%al`.
+
 ```asm
-movb $0x03, %ah        # Set function: Set RTC time
-movb $0x12, %ch        # Set hours to 12 (BCD format)
-movb $0x34, %cl        # Set minutes to 34 (BCD format)
-movb $0x56, %dh        # Set seconds to 56 (BCD format)
-int $0x1A              # Call BIOS system timer interrupt
+movb $0x02, %ah     # Set function code for 'Receive Character via Serial Port'
+movb $0x00, %dx     # Select COM1
+int $0x14           # Call BIOS serial port service
+# The received character is stored in %al
 ```
-
-In this example, the time in the RTC is set to 12:34:56 in **BCD format**.
 
 ---
 
-### **Get Real-Time Clock Date** - `AH=04h`
+### Get Serial Port Status
 
-This function retrieves the current date from the real-time clock (RTC), including the day, month, and year.
+This function checks the status of the specified serial port. It returns flags that indicate whether the serial port is ready to transmit or receive data.
 
-#### Parameters:
-- **AH** = `04h` (Function identifier)
+#### Remarks
+This function is useful for checking the state of the serial port without blocking the program. It provides information on whether the port is ready to send or receive data, allowing you to manage serial communications more efficiently.
 
-#### Returns:
-- **CH** = Century (BCD format)
-- **CL** = Year (BCD format)
-- **DH** = Month (BCD format)
-- **DL** = Day (BCD format)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x03` to get serial port status. |
+| `%dx` | Serial port number (`0x00` for COM1, `0x01` for COM2, etc.). |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ah` | Status flags of the serial port. |
+
+##### Serial Port Status Flags
+| Bit | Description |
+| --- | --- |
+| `0` | Data Ready (1 if data is available to be read). |
+| `1` | Overrun Error (1 if the input buffer has overrun). |
+| `2` | Parity Error (1 if a parity error occurred). |
+| `3` | Framing Error (1 if a framing error occurred). |
+| `4` | Break Interrupt (1 if a break signal is detected). |
+| `5` | Transmit Holding Register Empty (1 if ready to transmit). |
+| `6` | Transmit Shift Register Empty (1 if all data has been sent). |
+| `7` | Timeout Error (1 if a timeout occurred). |
+
+#### Example
+This example checks the status of COM1 to see if the port is ready to transmit data.
+
 ```asm
-movb $0x04, %ah        # Set function: Get RTC date
-int $0x1A              # Call BIOS system timer interrupt
-
-# Now CH contains the century, CL contains the year, DH contains the month, and DL contains the day (all in BCD format)
+movb $0x03, %ah     # Set function code for 'Get Serial Port Status'
+movb $0x00, %dx     # Select COM1
+int $0x14           # Call BIOS serial port service
+testb $0x20, %ah    # Test if the Transmit Holding Register is empty (bit 5)
+jnz ready_to_send   # Jump if the serial port is ready to send data
+ready_to_send:
+# COM1 is ready to transmit data
 ```
 
-In this example, the current date is retrieved from the RTC, and the values are returned in **BCD format**.
+## INT 0x1A - Real-Time Clock Services
+
+| Function | Description |
+| --- | --- |
+| `0x00` | Get System Time |
+| `0x01` | Set System Time |
+| `0x02` | Get Real-Time Clock Time |
+| `0x03` | Set Real-Time Clock Time |
+| `0x04` | Get Real-Time Clock Date |
+| `0x05` | Set Real-Time Clock Date |
+| `0x06` | Set RTC Alarm |
+| `0x07` | Reset RTC Alarm |
+| `0x08` | Read RTC Status |
+| `0x09` | Set RTC Interrupt Mask |
+| `0x0B` | Read Extended CMOS Data |
+| `0x0C` | Write Extended CMOS Data |
 
 ---
 
-### **Set Real-Time Clock Date** - `AH=05h`
+### Get System Time
 
-This function sets the date in the real-time clock (RTC) using the provided day, month, and year in BCD format.
+This function retrieves the system time in the format of hours, minutes, and seconds since midnight. The time is stored in the BIOS Data Area (BDA), and this function reads it.
 
-#### Parameters:
-- **AH** = `05h` (Function identifier)
-- **CH** = Century (BCD format)
-- **CL** = Year (BCD format)
-- **DH** = Month (BCD format)
-- **DL** = Day (BCD format)
+#### Remarks
+The system time is updated every 18.2 ticks per second. If you need higher precision timing, use timer-related functions. Be aware that this function retrieves the time since the last system boot.
 
-#### Returns:
-- None.
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x00` to get system time. |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%cx` | Hours (in BCD format). |
+| `%dx` | Minutes and seconds (BCD format, high byte = minutes, low byte = seconds). |
+
+#### Example
+This example retrieves the current system time in hours, minutes, and seconds.
+
 ```asm
-movb $0x05, %ah        # Set function: Set RTC date
-movb $0x20, %ch        # Set century to 20 (BCD format)
-movb $0x21, %cl        # Set year to 21 (BCD format)
-movb $0x09, %dh        # Set month to September (09h in BCD format)
-movb $0x15, %dl        # Set day to 15 (BCD format)
-int $0x1A              # Call BIOS system timer interrupt
+movb $0x00, %ah     # Set function code for 'Get System Time'
+int $0x1A           # Call BIOS real-time clock service
+# %cx contains hours in BCD, %dx contains minutes (high byte) and seconds (low byte) in BCD
 ```
-
-In this example, the RTC date is set to September 15, 2021, using **BCD format**.
-
-
-
-## BIOS Memory and Bootstrap Services
-
-The **INT 12h** and **INT 19h** interrupts provide essential services for querying the system's memory size and triggering the boot process. These interrupts are fundamental in system initialization and are often used during the boot phase of an operating system.
 
 ---
 
-## **INT 12h - Get Memory Size**
+### Set System Time
 
-This interrupt is used to determine the amount of conventional memory available in the system. Conventional memory is the first 640KB of RAM that is accessible in real mode.
+This function sets the system time in hours, minutes, and seconds since midnight. The time is stored in the BIOS Data Area (BDA).
 
-### **Get Memory Size** - `INT 12h`
+#### Remarks
+Make sure to provide valid values for hours, minutes, and seconds in Binary-Coded Decimal (BCD) format. This function only updates the system time stored in the BDA and does not modify the Real-Time Clock (RTC).
 
-This function returns the amount of conventional memory in kilobytes (up to 640KB). The value returned represents the amount of memory available below the 1MB mark, and it does not include extended or expanded memory.
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x01` to set system time. |
+| `%cx` | Hours (BCD format). |
+| `%dx` | Minutes and seconds (BCD format, high byte = minutes, low byte = seconds). |
 
-#### Parameters:
-- None. **INT 12h** does not require any parameters.
+#### Returns
+There are no return values.
 
-#### Returns:
-- **AX** = Size of conventional memory in kilobytes (up to 640KB)
+#### Example
+This example sets the system time to 12:30:45.
 
-#### Example (AT&T Syntax):
 ```asm
-int $0x12              # Call BIOS memory size interrupt
-
-# Now AX contains the size of conventional memory in KB
+movb $0x01, %ah     # Set function code for 'Set System Time'
+movw $0x1230, %cx   # 12 hours (BCD format)
+movw $0x3045, %dx   # 30 minutes and 45 seconds (BCD format)
+int $0x1A           # Call BIOS real-time clock service
+# System time is now set to 12:30:45
 ```
-
-In this example, the system's conventional memory size is returned in **AX**. If the system has 640KB of RAM, **AX** will contain `0x0280` (640 in decimal).
 
 ---
 
-## **INT 19h - Bootstrap Loader**
+### Get Real-Time Clock Time
 
-The **INT 19h** interrupt is used to initiate the system's boot process. It loads the first sector (the boot sector) from the boot device (typically a floppy disk or hard drive) and transfers control to the code loaded from that sector.
+This function retrieves the time from the Real-Time Clock (RTC) in Binary-Coded Decimal (BCD) format. The RTC continues to run even when the system is powered off, so this function provides the actual time of day.
 
-This interrupt is called by the BIOS during the startup sequence to load the operating system. However, it can also be invoked manually to restart the boot process, especially when developing bootloaders.
+#### Remarks
+The RTC provides the actual time as maintained by the system's battery-backed clock, so it persists across reboots. Make sure to convert BCD values if needed.
 
-### **Bootstrap Loader** - `INT 19h`
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x02` to get RTC time. |
 
-This function attempts to boot the system from the current boot device. It loads the first sector of the boot device (such as a floppy disk or hard drive) and then jumps to the code loaded into memory.
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ch` | Hours (BCD format). |
+| `%cl` | Minutes (BCD format). |
+| `%dh` | Seconds (BCD format). |
 
-#### Parameters:
-- None. **INT 19h** does not require any parameters.
+#### Example
+This example retrieves the current RTC time.
 
-#### Returns:
-- None. **INT 19h** does not return any values since control is transferred to the boot sector.
-
-#### Example (AT&T Syntax):
 ```asm
-int $0x19              # Call BIOS bootstrap loader interrupt
-
-# Control is transferred to the boot sector of the boot device
+movb $0x02, %ah     # Set function code for 'Get RTC Time'
+int $0x1A           # Call BIOS real-time clock service
+# %ch contains hours, %cl contains minutes, %dh contains seconds (all in BCD format)
 ```
-
-In this example, the **INT 19h** interrupt is called to trigger the boot process, loading the boot sector and transferring control to the code loaded from it.
-
-
-
-## DOS Services (INT 21h)
-
-The **INT 21h** interrupt provides access to a wide range of DOS services, including file handling, memory management, and system control. These services are essential for low-level DOS programs and utilities, allowing you to interact with the operating system and manage system resources.
 
 ---
 
-### **Write String to STDOUT** - `AH=09h`
+### Set Real-Time Clock Time
 
-This function writes a string of characters to the standard output (usually the screen). The string must be terminated by a dollar sign (`$`), which is how DOS recognizes the end of the string.
+This function sets the time in the Real-Time Clock (RTC) using Binary-Coded Decimal (BCD) values. This time is retained even when the system is powered off, as the RTC is battery-backed.
 
-#### Parameters:
-- **AH** = `09h` (Function identifier)
-- **DX** = Offset of the string in memory (the segment is assumed to be in `DS`)
+#### Remarks
+The RTC time will persist across system reboots and power-offs, as it is powered by a battery. Make sure the values are valid and in BCD format before setting the time.
 
-#### Returns:
-- None.
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x03` to set RTC time. |
+| `%ch` | Hours (BCD format). |
+| `%cl` | Minutes (BCD format). |
+| `%dh` | Seconds (BCD format). |
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example sets the RTC time to 14:45:30.
+
 ```asm
-movb $0x09, %ah        # Set function: Write string to STDOUT
-movw $msg, %dx         # Load offset of the string into DX
-int $0x21              # Call DOS interrupt
-
-msg:
-    .ascii "Hello, World!$"  # Null-terminated string for DOS
+movb $0x03, %ah     # Set function code for 'Set RTC Time'
+movb $0x14, %ch     # 14 hours (BCD format)
+movb $0x45, %cl     # 45 minutes (BCD format)
+movb $0x30, %dh     # 30 seconds (BCD format)
+int $0x1A           # Call BIOS real-time clock service
+# RTC time is now set to 14:45:30
 ```
-
-In this example, the string `"Hello, World!"` is printed to the screen. The string must end with a `$` to signal the end of the string to DOS.
 
 ---
 
-### **Open File** - `AH=3Dh`
+### Get Real-Time Clock Date
 
-This function opens a file and returns a file handle for subsequent read, write, or close operations.
+This function retrieves the current date from the Real-Time Clock (RTC), including the year, month, and day. The date is returned in Binary-Coded Decimal (BCD) format.
 
-#### Parameters:
-- **AH** = `3Dh` (Function identifier)
-- **AL** = Access mode  
-  - `00h`: Read-only  
-  - `01h`: Write-only  
-  - `02h`: Read/Write
-- **DS:DX** = Pointer to the file name (ASCIIZ string, terminated by a null byte)
+#### Remarks
+The RTC provides the actual date maintained by the system's battery-backed clock, so this function gives the persistent system date. The date includes the century, so be sure to handle 4-digit years.
 
-#### Returns:
-- **AX** = File handle (if successful)
-- **CF** = Set on error
-- **AX** = Error code (if `CF` is set)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x04` to get RTC date. |
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%ch` | Year (BCD format). |
+| `%cl` | Month (BCD format). |
+| `%dh` | Day (BCD format). |
+
+#### Example
+This example retrieves the current RTC date.
+
 ```asm
-movb $0x3D, %ah        # Set function: Open file
-movb $0x00, %al        # Access mode: Read-only
-movw $filename, %dx    # Load offset of the filename into DX
-int $0x21              # Call DOS interrupt
-
-jc error               # Jump to error handling if the carry flag is set
-# Now AX contains the file handle
-
-filename:
-    .ascii "example.txt\0"  # ASCIIZ filename
+movb $0x04, %ah     # Set function code for 'Get RTC Date'
+int $0x1A           # Call BIOS real-time clock service
+# %ch contains the year, %cl contains the month, %dh contains the day (all in BCD format)
 ```
-
-In this example, the file `"example.txt"` is opened in read-only mode, and the file handle is returned in **AX**. If there is an error (such as the file not existing), the carry flag will be set, and **AX** will contain an error code.
 
 ---
 
-### **Close File** - `AH=3Eh`
+### Set Real-Time Clock Date
 
-This function closes an open file using the provided file handle.
+This function sets the date in the Real-Time Clock (RTC), using Binary-Coded Decimal (BCD) values. The date includes the year, month, and day, and is stored in the battery-backed RTC.
 
-#### Parameters:
-- **AH** = `3Eh` (Function identifier)
-- **BX** = File handle to close
+#### Remarks
+The date is stored in the RTC, which is persistent across reboots and power-offs. Ensure the date is in valid BCD format and includes the full year (including century).
 
-#### Returns:
-- **AX** = `00h` if successful
-- **CF** = Set on error
-- **AX** = Error code (if `CF` is set)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x05` to set RTC date. |
+| `%ch` | Year (BCD format). |
+| `%cl` | Month (BCD format). |
+| `%dh` | Day (BCD format). |
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example sets the RTC date to August 15, 2023.
+
 ```asm
-movb $0x3E, %ah        # Set function: Close file
-movw %ax, %bx          # File handle (from a previous open)
-int $0x21              # Call DOS interrupt
-
-jc error               # Jump to error handling if the carry flag is set
+movb $0x05, %ah     # Set function code for 'Set RTC Date'
+movb $0x20, %ch     # Year 2023 (BCD format for 23)
+movb $0x08, %cl     # Month 8 (August, BCD format)
+movb $0x15, %dh     # Day 15 (BCD format)
+int $0x1A           # Call BIOS real-time clock service
+# RTC date is now set to August 15, 2023
 ```
 
-In this example, a previously opened file is closed using the file handle in **BX**. If the operation fails, the carry flag will be set.
+### Read Extended CMOS Data (INT 0x1A - Function 0x0B)
+
+This function reads data from the extended CMOS (Complementary Metal-Oxide Semiconductor) area. The CMOS contains system hardware configuration data, and this function allows access to extended areas beyond the standard 128 bytes.
+
+#### Remarks
+The standard CMOS area is often limited to 128 bytes (addresses 0x00 to 0x7F), but some systems extend this area to allow more configuration data storage. This function allows reading from the extended CMOS, useful for systems with more complex configurations.
+
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%dx` | Address in extended CMOS to read. |
+
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%al` | Data read from the extended CMOS address. |
+
+#### Example
+This example reads a byte from extended CMOS address `0x80`.
+
+```asm
+movb $0x0B, %ah     # Set function code for 'Read Extended CMOS Data'
+movw $0x80, %dx     # Set extended CMOS address to 0x80
+int $0x1A           # Call BIOS real-time clock service
+# The byte at extended CMOS address 0x80 is stored in %al
+```
 
 ---
 
-### **Read from File** - `AH=3Fh`
+### Write Extended CMOS Data (INT 0x1A - Function 0x0C)
 
-This function reads data from an open file into a buffer in memory.
+This function writes data to the extended CMOS area. The extended CMOS is used for storing additional system configuration information.
 
-#### Parameters:
-- **AH** = `3Fh` (Function identifier)
-- **BX** = File handle
-- **CX** = Number of bytes to read
-- **DS:DX** = Pointer to the buffer where the data should be stored
+#### Remarks
+When writing to the extended CMOS, ensure that the correct address is being accessed, as incorrect values can lead to system misconfiguration. Be careful when modifying CMOS data, as it affects system hardware settings.
 
-#### Returns:
-- **AX** = Number of bytes read (if successful)
-- **CF** = Set on error
-- **AX** = Error code (if `CF` is set)
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%dx` | Address in extended CMOS to write. |
+| `%al` | Data byte to be written to the specified CMOS address. |
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example writes a byte (`0xAA`) to extended CMOS address `0x80`.
+
 ```asm
-movb $0x3F, %ah        # Set function: Read from file
-movw %bx, %bx          # File handle (from a previous open)
-movw $100, %cx         # Number of bytes to read
-movw $buffer, %dx      # Load offset of the buffer into DX
-int $0x21              # Call DOS interrupt
-
-jc error               # Jump to error handling if the carry flag is set
-# Now AX contains the number of bytes read
-
-buffer:
-    .space 100         # Allocate 100 bytes for the buffer
+movb $0x0C, %ah     # Set function code for 'Write Extended CMOS Data'
+movw $0x80, %dx     # Set extended CMOS address to 0x80
+movb $0xAA, %al     # Set data byte to 0xAA
+int $0x1A           # Call BIOS real-time clock service
+# The byte 0xAA is written to extended CMOS address 0x80
 ```
 
-In this example, data is read from the open file into the **buffer**. The number of bytes read is returned in **AX**, and the carry flag is set if an error occurs.
+
+## INT 0x19 - Boot Services
+
+| Function | Description |
+| --- | --- |
+| `0x00` | Boot the System (Cold Boot) |
 
 ---
 
-### **Write to File** - `AH=40h`
+### Boot the System (Cold Boot)
 
-This function writes data from a buffer in memory to an open file.
+This function initiates a system boot by jumping to the BIOS bootstrap loader. The bootstrap loader will attempt to boot from the configured boot devices in the order specified in the BIOS settings (typically floppy, hard disk, CD-ROM, or network).
 
-#### Parameters:
-- **AH** = `40h` (Function identifier)
-- **BX** = File handle
-- **CX** = Number of bytes to write
-- **DS:DX** = Pointer to the buffer containing the data to write
+#### Remarks
+This function performs a cold boot (full system reset), effectively restarting the entire system. It is equivalent to pressing the reset button or powering the system off and back on. Any unsaved data or program state will be lost. Use this function with caution, as it will not return control to the calling program.
 
-#### Returns:
-- **AX** = Number of bytes written (if successful)
-- **CF** = Set on error
-- **AX** = Error code (if `CF` is set)
+#### Parameters
+There are no input parameters for this function.
 
-#### Example (AT&T Syntax):
+#### Returns
+This function does not return, as the system is restarted immediately.
+
+#### Example
+This example triggers a cold boot, restarting the entire system.
+
 ```asm
-movb $0x40, %ah        # Set function: Write to file
-movw %bx, %bx          # File handle (from a previous open)
-movw $12, %cx          # Number of bytes to write
-movw $msg, %dx         # Load offset of the message buffer into DX
-int $0x21              # Call DOS interrupt
-
-jc error               # Jump to error handling if the carry flag is set
-
-msg:
-    .ascii "Hello, DOS!"
+int $0x19           # Call BIOS boot service
+# The system reboots, and control is transferred to the BIOS bootstrap loader
 ```
 
-In this example, the string `"Hello, DOS!"` is written to the open file. The number of bytes written is returned in **AX**, and the carry flag is set if an error occurs.
+
+## Miscellaneous Services
+
+| Function | Description |
+| --- | --- |
+| `INT 0x1A - Function 0x06` | Set RTC Alarm |
+| `INT 0x1A - Function 0x07` | Reset RTC Alarm |
+| `INT 0x1A - Function 0x08` | Read RTC Status |
+| `INT 0x1A - Function 0x09` | Set RTC Interrupt Mask |
+| `INT 0x05` | Print Screen |
+| `INT 0x18` | Execute ROM BASIC (Cassette Services) |
+| `INT 0x19` | Bootstrap Loader |
 
 ---
 
-### **Terminate Program with Return Code** - `AH=4Ch`
+### Set RTC Alarm (INT 0x1A - Function 0x06)
 
-This function terminates the currently running program and returns control to DOS, optionally passing a return code.
+This function sets the Real-Time Clock (RTC) alarm, allowing the system to wake up or trigger an interrupt at a specified time.
 
-#### Parameters:
-- **AH** = `4Ch` (Function identifier)
-- **AL** = Return code (0 for success, non-zero for failure)
+#### Remarks
+This function allows setting a wake-up time or alert based on the RTC. It uses Binary-Coded Decimal (BCD) values for hours, minutes, and seconds. Ensure that the RTC interrupt system is properly configured for the alarm to trigger correctly.
 
-#### Returns:
-- Control is returned to DOS, and the specified return code is passed.
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x06` to set RTC alarm. |
+| `%ch` | Alarm hour (BCD format). |
+| `%cl` | Alarm minute (BCD format). |
+| `%dh` | Alarm second (BCD format). |
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example sets an alarm for 08:30:00.
+
 ```asm
-movb $0x4C, %ah        # Set function: Terminate program
-movb $0x00, %al        # Return code 0 (success)
-int $0x21              # Call DOS interrupt
+movb $0x06, %ah     # Set function code for 'Set RTC Alarm'
+movb $0x08, %ch     # 08 hours (BCD format)
+movb $0x30, %cl     # 30 minutes (BCD format)
+movb $0x00, %dh     # 00 seconds (BCD format)
+int $0x1A           # Call BIOS real-time clock service
+# RTC alarm is set for 08:30:00
 ```
-
-In this example, the program terminates and returns a success code (`0`) to DOS.
-
-
-
-## BIOS Mouse Services (INT 33h)
-
-The **INT 33h** interrupt provides services for interacting with a mouse. These functions include resetting the mouse, showing and hiding the cursor, retrieving the mouse's position and button states, and setting the cursor position.
 
 ---
 
-### **Reset Mouse** - `AX=0000h`
+### Reset RTC Alarm (INT 0x1A - Function 0x07)
 
-This function initializes the mouse driver and determines if a mouse is installed. It also resets the mouse to its default state.
+This function disables the currently set RTC alarm.
 
-#### Parameters:
-- **AX** = `0000h` (Function identifier)
+#### Remarks
+Once the RTC alarm has been reset, no further interrupts will be triggered by the alarm until it is set again.
 
-#### Returns:
-- **AX** = `FFFFh` if a mouse is installed
-- **AX** = `0000h` if no mouse is installed
-- **BX** = Number of mouse buttons
+#### Parameters
+There are no input parameters.
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example disables any currently set RTC alarm.
+
 ```asm
-movw $0x0000, %ax      # Set function: Reset mouse
-int $0x33              # Call BIOS mouse interrupt
-
-cmpw $0xFFFF, %ax      # Check if mouse is installed
-jne no_mouse           # Jump if no mouse is found
-
-# Now BX contains the number of mouse buttons
+movb $0x07, %ah     # Set function code for 'Reset RTC Alarm'
+int $0x1A           # Call BIOS real-time clock service
+# RTC alarm is now disabled
 ```
-
-In this example, the system checks if a mouse is installed. If a mouse is present, **BX** will contain the number of mouse buttons.
 
 ---
 
-### **Show Mouse Cursor** - `AX=0001h`
+### Read RTC Status (INT 0x1A - Function 0x08)
 
-This function makes the mouse cursor visible on the screen.
+This function reads the status of the Real-Time Clock (RTC), including whether the RTC is operational and if there is an alarm set.
 
-#### Parameters:
-- **AX** = `0001h` (Function identifier)
+#### Remarks
+The status provides information on whether the RTC is functioning correctly, and whether the alarm system is active. It is useful for diagnosing issues with the RTC or confirming that the alarm was set correctly.
 
-#### Returns:
-- None.
+#### Parameters
+There are no input parameters.
 
-#### Example (AT&T Syntax):
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%al` | RTC status flags (bitmask). |
+
+##### RTC Status Flags
+| Bit | Description |
+| --- | --- |
+| `0` | RTC operational (1 = running, 0 = stopped). |
+| `1` | RTC alarm is set. |
+
+#### Example
+This example checks if the RTC is operational and if an alarm is set.
+
 ```asm
-movw $0x0001, %ax      # Set function: Show mouse cursor
-int $0x33              # Call BIOS mouse interrupt
+movb $0x08, %ah     # Set function code for 'Read RTC Status'
+int $0x1A           # Call BIOS real-time clock service
+testb $0x01, %al    # Test if bit 0 is set (RTC operational)
+jnz rtc_running     # Jump if RTC is running
+rtc_running:
+# RTC is operational
 ```
-
-In this example, the mouse cursor is made visible on the screen.
 
 ---
 
-### **Hide Mouse Cursor** - `AX=0002h`
+### Set RTC Interrupt Mask (INT 0x1A - Function 0x09)
 
-This function hides the mouse cursor, removing it from the screen.
+This function sets the mask for RTC interrupts, enabling or disabling specific interrupt events such as periodic interrupts or alarm interrupts.
 
-#### Parameters:
-- **AX** = `0002h` (Function identifier)
+#### Remarks
+This function allows enabling or disabling specific types of RTC-generated interrupts. Proper use of this function is essential for managing power and alarm events.
 
-#### Returns:
-- None.
+#### Parameters
+| Register | Parameter description |
+| --- | --- |
+| `%ah` | Function number, `0x09` to set RTC interrupt mask. |
+| `%al` | RTC interrupt mask (bitmask). |
 
-#### Example (AT&T Syntax):
+##### Interrupt Mask Bits
+| Bit | Description |
+| --- | --- |
+| `0` | Enable periodic interrupts. |
+| `1` | Enable alarm interrupts. |
+| `2` | Enable update-ended interrupts. |
+
+#### Returns
+There are no return values.
+
+#### Example
+This example enables alarm interrupts on the RTC.
+
 ```asm
-movw $0x0002, %ax      # Set function: Hide mouse cursor
-int $0x33              # Call BIOS mouse interrupt
+movb $0x09, %ah     # Set function code for 'Set RTC Interrupt Mask'
+movb $0x02, %al     # Enable alarm interrupts (bit 1)
+int $0x1A           # Call BIOS real-time clock service
+# RTC alarm interrupts are now enabled
 ```
-
-In this example, the mouse cursor is hidden from the screen.
 
 ---
 
-### **Get Mouse Position and Button Status** - `AX=0003h`
+### Print Screen (INT 0x05)
 
-This function retrieves the current mouse position (in pixels) and the state of the mouse buttons.
+This function captures the current contents of the screen (in text mode) and sends it to the printer connected to the first parallel port (LPT1).
 
-#### Parameters:
-- **AX** = `0003h` (Function identifier)
+#### Remarks
+This function only works in text mode and prints the contents of the entire screen. It does not work in graphics modes. Make sure a printer is connected and online, or the function may hang.
 
-#### Returns:
-- **BX** = Mouse button status  
-  | **Bit** | **Description**               |
-  |---------|-------------------------------|
-  | `0`     | Left button pressed           |
-  | `1`     | Right button pressed          |
-  | `2`     | Middle button pressed (if available) |
-- **CX** = X-coordinate of the mouse position
-- **DX** = Y-coordinate of the mouse position
+#### Parameters
+There are no input parameters.
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values.
+
+#### Example
+This example captures the screen and sends it to the printer.
+
 ```asm
-movw $0x0003, %ax      # Set function: Get mouse position and button status
-int $0x33              # Call BIOS mouse interrupt
-
-# Now BX contains the button status, CX contains the X position, and DX contains the Y position
+int $0x05           # Call BIOS print screen service
+# The current screen content is sent to the printer
 ```
-
-In this example, the current mouse position and button status are retrieved. The coordinates are returned in **CX** (X position) and **DX** (Y position), and the mouse button status is returned in **BX**.
 
 ---
 
-### **Set Mouse Position** - `AX=0004h`
+### Execute ROM BASIC (Cassette Services) (INT 0x18)
 
-This function sets the mouse position to the specified X and Y coordinates on the screen.
+This function transfers control to the ROM BASIC interpreter. It was used in older systems to load BASIC directly from ROM, typically used when no bootable media was found.
 
-#### Parameters:
-- **AX** = `0004h` (Function identifier)
-- **CX** = New X-coordinate of the mouse position
-- **DX** = New Y-coordinate of the mouse position
+#### Remarks
+This function is mostly obsolete and is unlikely to be found on modern systems. It was used in early PCs that had a built-in BASIC interpreter stored in ROM.
 
-#### Returns:
-- None.
+#### Parameters
+There are no input parameters.
 
-#### Example (AT&T Syntax):
+#### Returns
+There are no return values, as control is passed to the ROM BASIC interpreter.
+
+#### Example
+This example transfers control to the ROM BASIC interpreter.
+
 ```asm
-movw $0x0004, %ax      # Set function: Set mouse position
-movw $100, %cx         # Set X position to 100
-movw $150, %dx         # Set Y position to 150
-int $0x33              # Call BIOS mouse interrupt
+int $0x18           # Call BIOS ROM BASIC service
+# Control is transferred to the ROM BASIC interpreter
 ```
-
-In this example, the mouse position is set to coordinates (100, 150).
 
 ---
 
-### **Set Mouse Cursor Range** - `AX=0007h`
+### Bootstrap Loader (INT 0x19)
 
-This function sets the horizontal and vertical ranges for the mouse cursor, restricting its movement to a specific area of the screen.
+This function executes the bootstrap loader, similar to the cold boot function. It attempts to boot the system from the configured boot devices.
 
-#### Parameters:
-- **AX** = `0007h` (Function identifier)
-- **CX** = Minimum X-coordinate (leftmost position)
-- **DX** = Maximum X-coordinate (rightmost position)
-- **SI** = Minimum Y-coordinate (topmost position)
-- **DI** = Maximum Y-coordinate (bottommost position)
+#### Remarks
+This function initiates a boot process and transfers control to the system's bootloader (typically located on the first bootable device). It is functionally equivalent to triggering a reboot through INT 0x19.
 
-#### Returns:
-- None.
+#### Parameters
+There are no input parameters.
 
-#### Example (AT&T Syntax):
+#### Returns
+This function does not return, as control is transferred to the bootstrap loader.
+
+#### Example
+This example calls the bootstrap loader.
+
 ```asm
-movw $0x0007, %ax      # Set function: Set mouse cursor range
-movw $50, %cx          # Set minimum X position to 50
-movw $300, %dx         # Set maximum X position to 300
-movw $50, %si          # Set minimum Y position to 50
-movw $200, %di         # Set maximum Y position to 200
-int $0x33              # Call BIOS mouse interrupt
+int $0x19           # Call BIOS bootstrap loader service
+# The system boots from the configured boot device
 ```
 
-In this example, the mouse movement is restricted to the rectangle defined by the coordinates (50, 50) and (300, 200).
+## INT 0x1E - Diskette Parameter Table Services
 
-
-## BIOS Miscellaneous System Services (INT 15h)
-
-The **INT 15h** interrupt provides a variety of system services that are not covered by other interrupts. These include advanced memory management, A20 gate control, keyboard functions, and system shutdown. These services are crucial for managing system-level operations and extended memory access in low-level programs.
+| Function | Description |
+| --- | --- |
+| `0x00` | Get Diskette Drive Parameters (using Diskette Parameter Table) |
 
 ---
 
-### **Get Extended Memory Size** - `AH=88h`
+### Get Diskette Drive Parameters (using Diskette Parameter Table)
 
-This function returns the size of extended memory (memory above 1MB) available in the system. This memory is used in **protected mode** and is often utilized for extended DOS applications or multitasking operating systems.
+This function retrieves the diskette drive parameters stored in the BIOS Diskette Parameter Table (DPT). It provides information such as the number of sectors per track, gap lengths, and data rates. These parameters are essential for proper communication with diskette drives.
 
-#### Parameters:
-- **AH** = `88h` (Function identifier)
+#### Remarks
+The Diskette Parameter Table is typically located at memory address `0x0000:0x0078` in the BIOS Data Area (BDA). It holds critical information for diskette operations, and this function provides a way to read those values.
 
-#### Returns:
-- **AX** = Size of extended memory in kilobytes (1KB units, up to 65535KB or 64MB)
+The parameters returned by this function are specific to the type of diskette drive and media being used (e.g., 3.5" 1.44MB, 5.25" 1.2MB).
 
-#### Example (AT&T Syntax):
+#### Parameters
+There are no input parameters.
+
+#### Returns
+| Register | Description |
+| --- | --- |
+| `%es:%bx` | Pointer to the Diskette Parameter Table (DPT). |
+
+##### Diskette Parameter Table (DPT) Layout
+| Offset | Description |
+| --- | --- |
+| `+0x00` | Step rate (for stepping between tracks). |
+| `+0x01` | Head unload time. |
+| `+0x02` | Head load time. |
+| `+0x03` | Motor on delay time (in clock ticks). |
+| `+0x04` | Bytes per sector (typically `512`). |
+| `+0x05` | Sectors per track (number of sectors per disk track). |
+| `+0x06` | Gap length for read/write operations. |
+| `+0x07` | Data length (for variable-length sectors). |
+| `+0x08` | Format gap length (gap between sectors when formatting). |
+| `+0x09` | Fill byte used when formatting. |
+| `+0x0A` | Head settle time. |
+| `+0x0B` | Motor start delay time. |
+
+#### Example
+This example retrieves the Diskette Parameter Table and accesses its contents.
+
 ```asm
-movb $0x88, %ah        # Set function: Get extended memory size
-int $0x15              # Call BIOS interrupt
-
-# Now AX contains the size of extended memory in KB
+int $0x1E           # Call BIOS diskette parameter table service
+movw %es, %ax       # Store the segment of the Diskette Parameter Table
+movw %bx, %di       # Store the offset of the Diskette Parameter Table
+# The Diskette Parameter Table is now accessible at %es:%di
 ```
 
-In this example, the amount of extended memory available (in kilobytes) is returned in **AX**. This is memory above the first megabyte of system RAM.
+## INT 0x18 - Cassette Services
+
+| Function | Description |
+| --- | --- |
+| `0x00` | Load and Execute ROM BASIC |
 
 ---
 
-### **Enable A20 Line** - `AH=2401h`
+### Load and Execute ROM BASIC (Cassette Services)
 
-This function enables the **A20 line**, allowing access to memory addresses above 1MB. The A20 gate is a hardware mechanism that controls whether the 21st address line is enabled, which is required to access memory beyond the 1MB boundary.
+This function attempts to load and execute the ROM BASIC interpreter, a feature found in early IBM PC systems. When the BIOS is unable to find a bootable device (such as a floppy or hard drive), it would fall back on this function to execute BASIC from ROM.
 
-#### Parameters:
-- **AX** = `2401h` (Function identifier for enabling A20)
+#### Remarks
+ROM BASIC is obsolete and is not present in modern systems. Early IBM PCs had BASIC embedded in ROM for users who did not have any bootable media. Calling this function effectively hands control over to the ROM BASIC interpreter, and the system will no longer return control to the original program.
 
-#### Returns:
-- **AH** = Status (0 if successful)
+Modern systems no longer include ROM BASIC, so invoking this function will have no effect on newer machines.
 
-#### Example (AT&T Syntax):
+#### Parameters
+There are no input parameters.
+
+#### Returns
+This function does not return, as control is transferred to the ROM BASIC interpreter.
+
+#### Example
+This example demonstrates invoking ROM BASIC.
+
 ```asm
-movw $0x2401, %ax      # Set function: Enable A20 line
-int $0x15              # Call BIOS interrupt
-
-# Now AH contains the status of the operation (0 if successful)
+int $0x18           # Call BIOS cassette services to load ROM BASIC
+# Control is transferred to the ROM BASIC interpreter (on early systems)
 ```
 
-In this example, the **A20 line** is enabled, allowing access to extended memory above the 1MB boundary.
-
----
-
-### **Disable A20 Line** - `AH=2400h`
-
-This function disables the **A20 line**, restricting memory access to below 1MB. Disabling the A20 line reverts the system to a legacy addressing mode, where memory wraps around at the 1MB boundary (useful for emulating older 8086/8088 behavior).
-
-#### Parameters:
-- **AX** = `2400h` (Function identifier for disabling A20)
-
-#### Returns:
-- **AH** = Status (0 if successful)
-
-#### Example (AT&T Syntax):
-```asm
-movw $0x2400, %ax      # Set function: Disable A20 line
-int $0x15              # Call BIOS interrupt
-
-# Now AH contains the status of the operation (0 if successful)
-```
-
-In this example, the **A20 line** is disabled, restricting memory access to below the 1MB boundary.
-
----
-
-### **System Shutdown** - `AH=4Fh`
-
-This function shuts down the system. It is typically used to turn off the system or initiate a soft power-off if the system supports this feature.
-
-#### Parameters:
-- **AH** = `4Fh` (Function identifier)
-
-#### Returns:
-- None.
-
-#### Example (AT&T Syntax):
-```asm
-movb $0x4F, %ah        # Set function: System shutdown
-int $0x15              # Call BIOS interrupt
-```
-
-In this example, the system initiates a shutdown or powers off if supported by the hardware.
-
----
-
-### **Keyboard Intercept (Keyboard Hook)** - `AH=4Fh`
-
-This function intercepts keyboard input by allowing the BIOS to filter or modify keystrokes. It is often used to modify keyboard behavior or remap keys at a low level.
-
-#### Parameters:
-- **AX** = `4Fh` (Function identifier)
-
-#### Returns:
-- None.
-
-#### Example (AT&T Syntax):
-```asm
-movw $0x4F00, %ax      # Set function: Keyboard intercept
-int $0x15              # Call BIOS interrupt
-```
-
-In this example, the system sets up a keyboard intercept, allowing the BIOS to monitor or modify keyboard input.
-
----
-
-### **Copy Extended Memory Block** - `AH=87h`
-
-This function is used to copy blocks of memory in the extended memory area (above 1MB). It is useful for operating systems that need to manage memory blocks for tasks such as moving data between regions of memory.
-
-#### Parameters:
-- **AH** = `87h` (Function identifier)
-- **ES:SI** = Source address (32-bit physical address)
-- **ES:DI** = Destination address (32-bit physical address)
-- **CX** = Number of bytes to copy
-
-#### Returns:
-- None.
-
-#### Example (AT&T Syntax):
-```asm
-movb $0x87, %ah        # Set function: Copy extended memory block
-movw $0x1000, %si      # Set source address (physical address 0x1000)
-movw $0x2000, %di      # Set destination address (physical address 0x2000)
-movw $512, %cx         # Set number of bytes to copy
-int $0x15              # Call BIOS interrupt
-```
-
-In this example, 512 bytes of memory are copied from the source address **0x1000** to the destination address **0x2000** in the extended memory area.
 
