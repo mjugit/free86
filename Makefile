@@ -10,9 +10,9 @@ LD = tools/bin/i386-elf-ld
 
 
 MBR_BIN = $(BUILD_BIN_DIR)/BOOTSECTOR.bin
-MBR_OBJ = $(BUILD_OBJ_DIR)/mbr/boot-sector.o
-MBR_SRC = $(REPOSITORY_PATH)/boot/boot-sector.s
-MBR_LINK = $(REPOSITORY_PATH)/boot/mbr.link.ld
+MBR_OBJ = $(BUILD_OBJ_DIR)/mbr/boot_sector.o
+MBR_SRC = $(REPOSITORY_PATH)/boot/boot_sector.s
+MBR_LINK = $(REPOSITORY_PATH)/boot/mbr_link.ld
 
 $(MBR_BIN): $(MBR_SRC)
 	mkdir -p $(BUILD_BIN_DIR)
