@@ -8,6 +8,6 @@ SECTIONS
 
 	.text :
 	{
-	*(.text)
+		*(.text)
 	}
 }
