@@ -1,23 +1,50 @@
-
+	# File: boot_sector.s
+	#
+	# This file contains the assembler code of the first stage
+	# bootloader, which runs in 16-bit Real Mode. It loads the
+	# kernel into memory and passes control to it.
+	# 
 
 	.code16
+	
 	.section .text
 
-	.equ STACK_BOTTOM, 0x7e00
-	.equ STACK_TOP, 0x7fff
 
-	.equ SCREEN_COLOR, 0x1f
+	# Stack addresses
+	.equ STACK_BOTTOM_ADDRESS, 0x7e00
+	.equ STACK_TOP_ADDRESS, 0x7fff
 
-	.global boot_sector_start
-	.type boot_sector_start, @function
+	# Kernel addresses
+	.equ KERNEL_ENTRY_ADDRESS, 0x1000
+	.equ KERNEL_LOAD_SEGMENT, 0x0100
+	
+	# MBR entry point
+	.global _mbr_main
+	.type _mbr_main, @function
 
-	.type reset_cursor, @function
-	.type clear_screen, @function
-	.type print_message, @function
 
-	.type startup_message, @object
+	# Early boot video operations
+	.equ _MBR_VIDEO__COLORS, 0x07
+	
+	.type _mbr_video__reset_cursor, @function
+	.type _mbr_video__clear_screen, @function
+	.type _mbr_video__print_string, @function
 
-boot_sector_start:
+	# Early boot helper methods
+	.type _mbr_start__load_kernel, @function
+	.type _mbr_start__halt_with_error, @function
+
+	# Early boot messages
+	.type _mbr_msg__load_error, @object
+	.type _mbr_msg__load_success, @object
+	.type _mbr_msg__startup, @object
+
+
+
+	
+	# Entry point
+	
+_mbr_main:
 
 	cli
 
@@ -25,34 +52,28 @@ boot_sector_start:
 	movw %ax, %ds
 	movw %ax, %es
 	movw %ax, %ss
-	movw $STACK_TOP, %sp
+	movw $STACK_TOP_ADDRESS, %sp
 
 	sti
 
-	call clear_screen
-	call reset_cursor
+	call _mbr_video__clear_screen
+	call _mbr_video__reset_cursor
 
-	lea startup_message, %si
-	call print_message
+	lea _mbr_msg__startup, %si
+	call _mbr_video__print_string
 
-	lea loading_message, %si
-	call print_message
-
-boot_sector_catch:
-
-	cli
-
-1:
-	hlt
-	jmp 1
+	call _mbr_start__load_kernel
+	
+	jmp 0x1000
 
 
-	#
-	# Helper methods
-	#
 
 
-reset_cursor: 
+
+	# Video helper methods
+	
+
+_mbr_video__reset_cursor: 
 
 	pusha
 
@@ -67,9 +88,9 @@ reset_cursor:
 
 	popa
 	ret
+	
 
-
-clear_screen: 
+_mbr_video__clear_screen: 
 
 	pusha
 
@@ -78,7 +99,7 @@ clear_screen:
 	
 	mov $6, %ah
 	mov $0, %al
-	mov $SCREEN_COLOR, %bh
+	mov $_MBR_VIDEO__COLORS, %bh
 	mov $0x0, %ch
 	mov $0x0, %cl
 	mov $25, %dh
@@ -90,7 +111,7 @@ clear_screen:
 	ret
 
 
-print_message: 
+_mbr_video__print_string: 
 
 	pusha
 
@@ -110,6 +131,71 @@ print_message:
 	ret
 
 
+	
+	# Startup helper methods
+
+	
+_mbr_start__load_kernel: 
+	pusha
+	
+	# Set load destination
+	
+	xorw %ax, %ax
+	movw $KERNEL_LOAD_SEGMENT, %ax
+	movw %ax, %es
+	xorw %bx, %bx
+
+	# BIOS Function:
+	# Read sectors from disk
+
+	movb $0x02, %ah		# Function code
+	movb $16, %al		# Number of sectors to read
+	movb $0, %ch		# Cylinder number
+	movb $2, %cl		# Sector number
+	movb $0, %dh		# Head number
+	movb $0, %dl		# Drive number (0 = floppy)
+
+	int $0x13
+
+	jc 1f
+	jmp 2f
+
+1:
+	# Print error message
+	
+	lea _mbr_msg__load_error, %si
+	call _mbr_video__print_string
+
+	# Run into trap
+	
+	call _mbr_start__halt_with_error
+	
+2:	
+
+	# Return successfully
+
+	lea _mbr_msg__load_success, %si
+	call _mbr_video__print_string
+	
+	popa
+	ret
+	
+
+_mbr_start__halt_with_error: 
+
+	lea _mbr_msg__load_error, %si
+	call _mbr_video__print_string
+	
+	cli
+
+1:
+	hlt
+	jmp 1
+
+
+
+	
+	
 	#
 	# REMARK on the string constants below:
 	#
@@ -120,14 +206,20 @@ print_message:
 	# the section alignment of the linker!
 	#
 
-startup_message: 
+	
+_mbr_msg__load_error:
 
-	.asciz "[free86 bootloader]\n\r"
+	.asciz "Unable to load the kernel from disk.\n\r"
+
+_mbr_msg__load_success:
+
+	.asciz "Kernel loaded. Handing control.\n\r"
+	
+_mbr_msg__startup: 
+
+	.asciz "[free86]\n\n\r"
 
 
-loading_message: 
-
-	.asciz "Loading kernel...\n\r"
 
 
 	# BOOT SIGNATURE

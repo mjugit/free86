@@ -1,6 +1,6 @@
 OUTPUT_FORMAT("binary")
 
-ENTRY(boot_sector_start)
+ENTRY(_mbr_main)
 
 SECTIONS
 {
