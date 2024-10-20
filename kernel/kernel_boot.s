@@ -1,52 +1,90 @@
 	.code16
-	
 	.section .kernel_boot
 
-	.type kernel_start, @function
-	.global kernel_start
+	.type _kernel_boot, @function
+	.global _kernel_boot
 
-	.type kernel_hang, @function
-	.type kprint_message, @function
+	# Kernel boot messages
+	.type _kernel_msg__boot_error, @object
 	
-kernel_start:
-
-	lea hello_world_msg, %si
-	call kprint_message
-	call kernel_hang
-
-	.section .text
-
-kernel_hang:
+_kernel_boot:
 
 	cli
-	hlt
 
-	jmp kernel_hang
+	call check_a20
+	jnz kernel_start
+	call enable_a20
+
+kernel_start:
 	
+	lgdt [gdt_descriptor]
 
-kprint_message: 
-
-	pusha
-
-	# BIOS function call:
-	# Print in TTY mode
+	# Enable protected mode
+	movl %cr0, %eax
+	orl $0x1, %eax
+	movl %eax, %cr0
 	
-	movb $0x0e, %ah		# Function id
-1:
-	lodsb			# Write a char at a time until null
-	test %al, %al
-	jz 2f
-	int $0x10
-	
-	jmp 1b
-2:	
-	popa
+	ljmp $0x08, $_kernel_boot__protected_mode
+
+
+check_a20:
+
+	# Check A20 state
+
+	in $0x92, %al       # Read port 0x92
+	test $0x2, %al      # Check second bit
+	jz a20_disabled
+
+	# Return 1 in eax
+
+	mov $1, %eax
+
 	ret
+
+	
+a20_disabled:
+
+	# Return 0 in eax
+
+	xor %eax, %eax
+
+	ret
+
+enable_a20:
+
+	in $0x92, %al       # Read port 0x92
+	or $0x2, %al        # Set second bit
+	out %al, $0x92      # Write port 0x92
+
+	ret
+
+	
+	
+	.section .text
+	.align 4
+
+	.type _kernel_boot__protected_mode, @function
+_kernel_boot__protected_mode:
+
+	.code32
+	
+	mov $0x10, %ax
+	
+	mov %ax, %ds
+	mov %ax, %es
+	mov %ax, %fs
+	mov %ax, %gs
+	
+	mov %ax, %ss
+
+	call kernel_main
+	
+hang:
+	
+	hlt
+	jmp hang
 	
 
-	.section .data
 
-hello_world_msg:
 
-	.asciz "Hello, world!\n\r"
 	

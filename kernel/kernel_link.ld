@@ -1,6 +1,6 @@
 OUTPUT_FORMAT("binary")
 
-ENTRY(kernel_start)
+ENTRY(_kernel_boot)
 
 SECTIONS
 {
@@ -15,6 +15,7 @@ SECTIONS
 
 	.data :
 	{
+		*(.gdt)
 		*(.data)
 		*(.rodata)
 	}
