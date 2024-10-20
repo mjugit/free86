@@ -16,10 +16,19 @@ _kernel_boot:
 	call enable_a20
 
 kernel_start:
+
+	# Set graphics mode
+	
+	movb $0x13, %al
+	movb $0x00, %ah
+	int $0x10
+
+	# Load GDT
 	
 	lgdt [gdt_descriptor]
 
 	# Enable protected mode
+	
 	movl %cr0, %eax
 	orl $0x1, %eax
 	movl %eax, %cr0
