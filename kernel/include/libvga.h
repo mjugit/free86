@@ -24,7 +24,7 @@
 #define VGA_DAC_INDEX 0x3c8
 #define VGA_DAC_DATA 0x3c9
 
-
+// VGA status port
 #define VGA_STATUS 0x3da
 
 
@@ -60,12 +60,18 @@ typedef enum {
 
 extern void vga_set_plane_mask(uint8_t plane_mask);
 extern void vga_set_bit_mask(uint8_t bit_mask);
+
 extern void vga_draw_pixel(uint16_t x, uint16_t y, color_t color);
 extern void vga_draw_rect(uint16_t startx, uint16_t starty, uint16_t sizex, uint16_t sizey, color_t color);
 extern void vga_draw_char(uint16_t startx, uint16_t starty, const char character, color_t color);
+extern void vga_draw_string(uint16_t  startx, uint16_t starty, const char *text, color_t color);
+extern void vga_draw_hline(uint16_t startx, uint16_t starty, uint16_t sizex, color_t color);
+extern void vga_draw_vline(uint16_t startx, uint16_t starty, uint16_t sizey, color_t color);
 
 extern void vga_set_palette(color_t color, uint8_t palette_index);
 extern void vga_redefine_palette(uint8_t palette_index, uint8_t red, uint8_t green, uint8_t blue);
+
 extern void vga_load_palette(void);
+extern void vga_draw_testimage(void);
 
 #endif
