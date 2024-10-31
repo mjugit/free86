@@ -1,29 +1,55 @@
 #include <stdint.h>
-#include "include/libgfx.h"
+#include <stdarg.h>
+
+
+#include "include/libvga.h"
+#include "include/string.h"
+#include "include/libint.h"
+
+
+#define KERNEL_CODE_SEGMENT 0x08
+#define IDT_ENTRIES 256
+
+extern char *_system_memory_map;
+
+void print_mem_map_entry(unsigned int index, int startx, int starty) {
+
+  char *base_address = _system_memory_map + (index * 16);
+  
+  char buff[100];
+  uint32_t *base_address_ptr = (uint32_t*)base_address;
+  string_format(buff, "Base Address (uint32_t) = %x", *base_address_ptr);
+  vga_draw_string(startx, starty, buff, White);
+
+  uint32_t *length_ptr = (uint32_t*)(base_address + 4);
+  string_format(buff, "Length (uint32_t) = %x", *length_ptr);
+  vga_draw_string(startx, starty + 10, buff, White);
+
+  uint8_t *type_ptr = (uint8_t*)(base_address + 9);
+  string_format(buff, "Type (uint8_t) = %xb", *type_ptr);
+  vga_draw_string(startx, starty + 20, buff, White);
+
+}
+
 
 void kernel_main(void) {
-   volatile uint8_t* video_memory = (uint8_t*) 0xa0000;
+  vga_load_palette();
 
-   for (int i = 0; i < 480 * 640; i++) {
-    video_memory[i] = 0x42;
-   }
+  int_init_idt();
+  int_init_pic(0xfd, 0xff);
+  int_enable_interrupts();
 
-   gfx_draw_rect(0x1c, 0, 0, SCREEN_WIDTH, 16);
+  print_mem_map_entry(0, 0, 0);
+  print_mem_map_entry(1, 0, 60);
+  print_mem_map_entry(2, 0, 120);
 
-   gfx_draw_rect(0x1e, 1, 1, 1, 12);
-   gfx_draw_rect(0x1e, 1, 1, 201, 1);
-
-   gfx_draw_rect(0x1b, 202, 1, 1, 12);
-   gfx_draw_rect(0x1b, 2, 12, 200, 1);
-   
-   gfx_draw_rect(0x1d, 2, 2, 200, 10);
-
-
-   gfx_putstr(0x00, "This is a test", 2, 2);
-   gfx_putstr(0x03, "Hello, world!\0", 10, 20);
+    
+ 
   
-  //  video_memory[0] = 'A';
-  //  video_memory[1] = 0x04;
+  // vga_draw_testimage();
 
+  while (1)
+    __asm__ __volatile__("hlt");
+ 
   return;
 }

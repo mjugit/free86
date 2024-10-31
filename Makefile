@@ -37,15 +37,26 @@ KERNEL_AS_SRC = $(wildcard $(KERNEL_SRC_DIR)/*.s)
 KERNEL_OBJ_DIR = $(BUILD_OBJ_DIR)/kernel
 KERNEL_SRC_DIR = $(REPOSITORY_PATH)/kernel
 
+LIBVGA_SRC = $(wildcard $(KERNEL_SRC_DIR)/libvga/*.c)
+LIBVGA_SRC_DIR = $(KERNEL_SRC_DIR)/libvga
+LIBVGA_OBJ_DIR = $(BUILD_OBJ_DIR)/kernel/libvga
 
-LIBGFX_SRC = $(wildcard $(KERNEL_SRC_DIR)/libgfx/*.c)
-LIBGFX_SRC_DIR = $(KERNEL_SRC_DIR)/libgfx
-LIBGFX_OBJ_DIR = $(BUILD_OBJ_DIR)/kernel/libgfx
+LIBSTRING_SRC = $(wildcard $(KERNEL_SRC_DIR)/string/*.c)
+LIBSTRING_SRC_DIR = $(KERNEL_SRC_DIR)/string
+LIBSTRING_OBJ_DIR = $(BUILD_OBJ_DIR)/kernel/string
+
+LIBINT_SRC = $(wildcard $(KERNEL_SRC_DIR)/libint/*.c)
+LIBINT_AS_SRC = $(wildcard $(KERNEL_SRC_DIR)/libint/*.s)
+LIBINT_SRC_DIR = $(KERNEL_SRC_DIR)/libint
+LIBINT_OBJ_DIR = $(BUILD_OBJ_DIR)/kernel/libint
 
 
 KERNEL_OBJ = $(KERNEL_C_SRC:$(KERNEL_SRC_DIR)/%.c=$(KERNEL_OBJ_DIR)/%.o) \
 	$(KERNEL_AS_SRC:$(KERNEL_SRC_DIR)/%.s=$(KERNEL_OBJ_DIR)/%.o) \
-	$(LIBGFX_SRC:$(LIBGFX_SRC_DIR)/%.c=$(LIBGFX_OBJ_DIR)/%.o)
+	$(LIBVGA_SRC:$(LIBVGA_SRC_DIR)/%.c=$(LIBVGA_OBJ_DIR)/%.o) \
+	$(LIBSTRING_SRC:$(LIBSTRING_SRC_DIR)/%.c=$(LIBSTRING_OBJ_DIR)/%.o) \
+	$(LIBINT_SRC:$(LIBINT_SRC_DIR)/%.c=$(LIBINT_OBJ_DIR)/%.o) \
+	$(LIBINT_AS_SRC:$(LIBINT_SRC_DIR)/%.s=$(LIBINT_OBJ_DIR)/%.o)
 
 $(KERNEL_BIN): $(KERNEL_OBJ)
 #	$(CC) -T $(KERNEL_LINK) -o $(KERNEL_BIN) -ffreestanding -nostdlib $(KERNEL_OBJ_DIR)/kernel_boot.o -lgcc
@@ -57,14 +68,29 @@ $(KERNEL_OBJ_DIR)/%.o: $(KERNEL_SRC_DIR)/%.s | $(KERNEL_OBJ_DIR)
 $(KERNEL_OBJ_DIR)/%.o: $(KERNEL_SRC_DIR)/%.c | $(KERNEL_OBJ_DIR)
 	$(CC) -o $@ $(CFLAGS) -c $<
 
-$(LIBGFX_OBJ_DIR)/%.o: $(LIBGFX_SRC_DIR)/%.c | $(LIBGFX_OBJ_DIR)
+$(LIBSTRING_OBJ_DIR)/%.o: $(LIBSTRING_SRC_DIR)/%.c | $(LIBSTRING_OBJ_DIR)
 	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(LIBVGA_OBJ_DIR)/%.o: $(LIBVGA_SRC_DIR)/%.c | $(LIBVGA_OBJ_DIR)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(LIBINT_OBJ_DIR)/%.o: $(LIBINT_SRC_DIR)/%.c | $(LIBINT_OBJ_DIR)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(LIBINT_OBJ_DIR)/%.o: $(LIBINT_SRC_DIR)/%.s | $(LIBINT_OBJ_DIR)
+	$(AS) -o $@ $<
 
 $(KERNEL_OBJ_DIR):
 	mkdir -p $(KERNEL_OBJ_DIR)
 
-$(LIBGFX_OBJ_DIR):
-	mkdir -p $(LIBGFX_OBJ_DIR)
+$(LIBVGA_OBJ_DIR):
+	mkdir -p $(LIBVGA_OBJ_DIR)
+
+$(LIBSTRING_OBJ_DIR):
+	mkdir -p $(LIBSTRING_OBJ_DIR)
+
+$(LIBINT_OBJ_DIR):
+	mkdir -p $(LIBINT_OBJ_DIR)
 
 .PHONY: clean
 
