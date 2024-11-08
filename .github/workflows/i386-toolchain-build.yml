@@ -1,0 +1,39 @@
+name: Build Toolchain
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tools/Makefile'
+      - 'tools/*.mk'
+
+jobs:
+  build-toolchain:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y make bison flex mtools libgmp3-dev libmpc-dev libmpfr-dev texinfo libisoburn-dev
+
+      - name: Build Toolchain
+        working-directory: tools
+        run: make
+        
+      - name: Create ZIP Archive
+        run: |
+          YEAR=$(date +'%Y')
+          MONTH=$(date +'%m')
+          zip -r "i386-toolchain-bin.${YEAR}.${MONTH}.zip" . -x Makefile *.mk check-deps.archlinux.sh
+        working-directory: tools
+
+      - name: Upload Toolchain Archive
+        uses: actions/upload-artifact@v2
+        with:
+          name: i386-toolchain-bin
+          path: tools/i386-toolchain-bin.*.zip
