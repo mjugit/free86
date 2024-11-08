@@ -7,6 +7,7 @@ on:
     paths:
       - 'tools/Makefile'
       - 'tools/*.mk'
+      - '.github/workflows/i386-toolchain-build.yml'
 
 jobs:
   build-toolchain:
