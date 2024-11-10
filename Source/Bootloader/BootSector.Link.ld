@@ -1,6 +1,6 @@
 OUTPUT_FORMAT("binary")
 
-ENTRY(_mbr_main)
+ENTRY(BootloaderMain)
 
 SECTIONS
 {

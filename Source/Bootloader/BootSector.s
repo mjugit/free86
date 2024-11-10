@@ -11,40 +11,38 @@
 
 
 	# Stack addresses
-	.equ STACK_BOTTOM_ADDRESS, 0x7e00
-	.equ STACK_TOP_ADDRESS, 0x7fff
+	.equ StackBottom, 0x7e00
+	.equ StackTop, 0x7fff
 
 	# Kernel addresses
-	.equ KERNEL_ENTRY_ADDRESS, 0x1000
-	.equ KERNEL_LOAD_SEGMENT, 0x0100
+	.equ KernelMainStart, 0x1000
+	.equ KernelLoadSegment, 0x0100
 	
 	# MBR entry point
-	.global _mbr_main
-	.type _mbr_main, @function
+	.global BootloaderMain
+	.type BootloaderMain, @function
 
 
 	# Early boot video operations
-	.equ _MBR_VIDEO__COLORS, 0x07
-	
-	.type _mbr_video__reset_cursor, @function
-	.type _mbr_video__clear_screen, @function
-	.type _mbr_video__print_string, @function
+	.equ Bootloader_ScreenColorAttributes, 0x07
+
+	.type Bootloader_ResetCursor, @function
+	.type Bootloader_ClearScreen, @function
+	.type Bootloader_PrintString, @function
 
 	# Early boot helper methods
-	.type _mbr_start__load_kernel, @function
-	.type _mbr_start__halt_with_error, @function
+	.type Bootloader_LoadKernel, @function
+	.type Bootloader_HaltWithError, @function
 
 	# Early boot messages
-	.type _mbr_msg__load_error, @object
-	.type _mbr_msg__load_success, @object
-	.type _mbr_msg__startup, @object
+	.type BootMessage_LoadError, @object
+	.type BootMessage_LoadSuccess, @object
+	.type BootMessage_Title, @object
 
 
-
-	
 	# Entry point
 	
-_mbr_main:
+BootloaderMain:
 
 	cli
 
@@ -52,19 +50,19 @@ _mbr_main:
 	movw %ax, %ds
 	movw %ax, %es
 	movw %ax, %ss
-	movw $STACK_TOP_ADDRESS, %sp
+	movw $StackTop, %sp
 
 	sti
 
-	call _mbr_video__clear_screen
-	call _mbr_video__reset_cursor
+	call Bootloader_ClearScreen
+	call Bootloader_ResetCursor
 
-	lea _mbr_msg__startup, %si
-	call _mbr_video__print_string
+	lea BootMessage_Title, %si
+	call Bootloader_PrintString
 
-	call _mbr_start__load_kernel
+	call Bootloader_LoadKernel
 	
-	jmp 0x1000
+	jmp KernelMainStart
 
 
 
@@ -73,7 +71,7 @@ _mbr_main:
 	# Video helper methods
 	
 
-_mbr_video__reset_cursor: 
+Bootloader_ResetCursor: 
 
 	pusha
 
@@ -90,7 +88,7 @@ _mbr_video__reset_cursor:
 	ret
 	
 
-_mbr_video__clear_screen: 
+Bootloader_ClearScreen: 
 
 	pusha
 
@@ -99,7 +97,7 @@ _mbr_video__clear_screen:
 	
 	mov $6, %ah
 	mov $0, %al
-	mov $_MBR_VIDEO__COLORS, %bh
+	mov $Bootloader_ScreenColorAttributes, %bh
 	mov $0x0, %ch
 	mov $0x0, %cl
 	mov $25, %dh
@@ -111,7 +109,7 @@ _mbr_video__clear_screen:
 	ret
 
 
-_mbr_video__print_string: 
+Bootloader_PrintString: 
 
 	pusha
 
@@ -135,13 +133,13 @@ _mbr_video__print_string:
 	# Startup helper methods
 
 	
-_mbr_start__load_kernel: 
+Bootloader_LoadKernel: 
 	pusha
 	
 	# Set load destination
 	
 	xorw %ax, %ax
-	movw $KERNEL_LOAD_SEGMENT, %ax
+	movw $KernelLoadSegment, %ax
 	movw %ax, %es
 	xorw %bx, %bx
 
@@ -163,28 +161,28 @@ _mbr_start__load_kernel:
 1:
 	# Print error message
 	
-	lea _mbr_msg__load_error, %si
-	call _mbr_video__print_string
+	lea BootMessage_LoadError, %si
+	call Bootloader_PrintString
 
 	# Run into trap
 	
-	call _mbr_start__halt_with_error
+	call Bootloader_HaltWithError
 	
 2:	
 
 	# Return successfully
 
-	lea _mbr_msg__load_success, %si
-	call _mbr_video__print_string
+	lea BootMessage_LoadSuccess, %si
+	call Bootloader_PrintString
 	
 	popa
 	ret
 	
 
-_mbr_start__halt_with_error: 
+Bootloader_HaltWithError: 
 
-	lea _mbr_msg__load_error, %si
-	call _mbr_video__print_string
+	lea BootMessage_LoadError, %si
+	call Bootloader_PrintString
 	
 	cli
 
@@ -199,32 +197,30 @@ _mbr_start__halt_with_error:
 	#
 	# REMARK on the string constants below:
 	#
-	# These MUST reside in the .text section, because of the harsh
-	# space limitiations of the MBR (512 Bytes total).
-	#
-	# Using an additional section would exceed this limit due to
-	# the section alignment of the linker!
+	# Since the compiled code has to fit into a single section of
+	# 512 bytes on disk, you MUST NOT make use of more than the
+	# .text section. This is because the linker will align the
+	# sections at certain boundaries causing the resulting file to
+	# exceed this limit.
 	#
 
-	
-_mbr_msg__load_error:
+BootMessage_LoadError:
 
 	.asciz "Unable to load the kernel from disk.\n\r"
 
-_mbr_msg__load_success:
+BootMessage_LoadSuccess:
 
 	.asciz "Kernel loaded. Handing control.\n\r"
 	
-_mbr_msg__startup: 
+BootMessage_Title: 
 
 	.asciz "[free86]\n\n\r"
 
 
-
-
+	.org 510
+	
 	# BOOT SIGNATURE
 	# This word is required for the disk to be recognized as bootable.
 	#
-
-	.org 510
+	
 	.word 0xaa55
