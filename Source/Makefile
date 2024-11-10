@@ -10,11 +10,12 @@ LD = $(REPOSITORY_PATH)/Tools/bin/i386-elf-ld
 CC = $(REPOSITORY_PATH)/Tools/bin/i386-elf-gcc
 CFLAGS =  -ffreestanding -O2 -Wall -Wextra -std=gnu99
 
-.PHONY: bootloader clean-bootloader kernel clean-kernel clean all floppy clean-floppy qemu qemu-debug
+.PHONY: bootloader clean-bootloader kernel clean-kernel clean all floppy clean-floppy qemu qemu-debug clean-standardlib
 
 all: $(STRING_LIB) floppy
 
-clean: clean-bootloader clean-kernel clean-floppy
+clean: clean-bootloader clean-kernel clean-floppy clean-standardlib
+	rm -f $(BUILD_DIRECTORY_PATH)/*.a
 
 
 # BOOTLOADER
@@ -46,9 +47,14 @@ $(BOOTSECTOR_BUILD_PATH):
 STANDARDLIB_BUILD_PATH = $(BUILD_DIRECTORY_PATH)/StandardLib
 STANDARDLIB_SOURCE_PATH = $(SOURCE_DIRECTORY_PATH)/StandardLib
 
+clean-standardlib:
+	rm -fr $(STANDARDLIB_BUILD_PATH)
+
+
+
 STRING_BUILD_PATH = $(STANDARDLIB_BUILD_PATH)/String
 STRING_SOURCE_PATH = $(STANDARDLIB_SOURCE_PATH)/String
-STRING_LIB = $(BUILD_DIRECTORY_PATH)/String.a
+STRING_LIB = $(STANDARDLIB_BUILD_PATH)/String.a
 STRING_C_SOURCES = $(wildcard $(STANDARDLIB_SOURCE_PATH)/String/*.c)
 STRING_OBJECTS = $(STRING_C_SOURCES:$(STANDARDLIB_SOURCE_PATH)/String/%.c=$(STRING_BUILD_PATH)/%.o)
 
@@ -90,7 +96,7 @@ clean-kernel:
 
 $(KERNEL_BINARY): $(KERNEL_OBJECTS) $(STRING_LIB) | $(KERNEL_BUILD_PATH)
 	$(LD) -o $(KERNEL_BINARY) --oformat binary -T $(KERNEL_LINK) $(KERNEL_OBJECTS) \
-		-L $(BUILD_DIRECTORY_PATH) \
+		-L $(STANDARDLIB_BUILD_PATH) \
 		-l:String.a
 
 $(KERNEL_BUILD_PATH)/%.o: $(KERNEL_SOURCE_PATH)/%.s | $(KERNEL_BUILD_PATH)
