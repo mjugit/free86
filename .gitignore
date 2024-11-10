@@ -1,8 +1,8 @@
-build/*
-tools/bin
-tools/*-elf
-tools/include
-tools/lib
-tools/libexec
-tools/share
+Build/*
+Tools/bin
+Tools/*-elf
+Tools/include
+Tools/lib
+Tools/libexec
+Tools/share
 
