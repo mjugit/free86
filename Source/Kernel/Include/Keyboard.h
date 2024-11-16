@@ -2,6 +2,7 @@
 #define _KEYBOARD_H_
 
 #include "../../StandardLib/Include/Stream.h"
+#include <stdint.h>
 
 #define BREAK_CODE(scancode) ((scancode) + 0x80)
 
