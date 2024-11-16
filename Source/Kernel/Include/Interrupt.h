@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 
+#include "VgaGraphics.h"
+
+#include "../../StandardLib/Include/CoreTypes.h"
+#include "../../StandardLib/Include/Stream.h"
+
 #define KERNEL_CS 0x08
 #define IDT_ENTRY_COUNT 256
 
@@ -27,6 +32,9 @@ struct IdtDescriptor {
   uint16_t Limit;
   uint32_t Base;
 } __attribute__((packed));
+
+
+static Stream InputStream;
 
 
 extern void INT_SetIdtGate(int int_number, void(*service_routine), uint8_t flags);
