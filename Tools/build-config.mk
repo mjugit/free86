@@ -1,6 +1,6 @@
 TOOLS_PATH = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 REPOSITORY_PATH = $(shell dirname $(TOOLS_PATH))
-BUILD_PATH = $(REPOSITORY_PATH)/build/tools
+BUILD_PATH = $(REPOSITORY_PATH)/Build/Tools
 
 ifndef TOOLS_PATH
   $(error TOOLS_PATH is not defined. Check the configuration in $(lastword $(MAKEFILE_LIST)))
