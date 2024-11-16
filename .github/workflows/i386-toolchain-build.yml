@@ -1,10 +1,11 @@
-name: Build Toolchain
+name: Build Floppies
 
 on:
   push:
     branches:
       - main
     paths:
+      - 'Source/'
       - 'Tools/Makefile'
       - 'Tools/*.mk'
       - '.github/workflows/i386-toolchain-build.yml'
@@ -36,7 +37,7 @@ jobs:
       - name: Upload Toolchain Archive
         uses: actions/upload-artifact@v4
         with:
-          name: i386-toolchain-bin
+          name: i386-toolchain
           path: Tools/i386-toolchain-bin.*.zip
 
       - name: Build Floppy Image
@@ -46,7 +47,7 @@ jobs:
       - name: Upload Floppy Image
         uses: actions/upload-artifact@v4
         with:
-          name: free86-floppy
+          name: free86-floppies
           path: Build/Kickstart.img
         
           
