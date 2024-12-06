@@ -12,7 +12,7 @@ ISR_Keyboard:
 	cli
 	pusha
 
-	call _ISubR_KeyboardHandler
+	call Kbd_HandleKeyPress
 
 	movb $MASTER_PIC_CONTROL_PORT, %al
 	outb %al, $MASTER_PIC_CONTROL_PORT

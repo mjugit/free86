@@ -1,46 +1,31 @@
 #include "Include/VgaGraphics.h"
 #include "Include/Interrupt.h"
-#include "Include/Keyboard.h"
+#include "Include/Kbd.h"
 
 #include "../StandardLib/Include/String.h"
 #include "../StandardLib/Include/Stream.h"
+
+int posx = 0;
+int posy = 0;
+
+void EventHandler(KeyEventArgs args) {
+  char c = Kbd_GetGermanKeyMapChar(args.KeyCode, *args.Modifiers);
+  if (c) {
+    VGA_DrawChar(posx, posy, c, White);
+    posx += 8;
+  }
+}
+
+
 
 void KernelMain(void) {
   VGA_InitializeColorPalette();
 
   INT_InitializeIDT();
   INT_InitializePIC(0xfd, 0xff);
-  Stream_Initialize(&InputStream);
   INT_EnableInterrupts();
 
-  // VGA_DrawTestImage();
-  short posx = 0;
-  short posy = 0;
-
-  Charset ger = Keyboard_GetGermanCharset();
-  Stream input;
-
-  Stream_Initialize(&input);
-  Keyboard_SetInputStream(&input);
-  Keyboard_SetCharset(&ger);
-
-  char c = 0;
-  do {
-    if (!Stream_Read(&input, &c))
-      continue;
-
-    VGA_DrawChar(posx, posy, c, White);
-    if (c == '\b') {
-      posx -= 8;
-      continue;
-    }
-    
-    posx += 8;
-    if (posx >= 640 || c == '\n') {
-      posy += 8;
-      posx = 0;
-    }
-  } while (true);
+  Kbd_SetKeyDownCallback(EventHandler);
 
 
 
