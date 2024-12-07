@@ -59,6 +59,8 @@ typedef enum {
 
 extern void VGA_SetPlaneMask(uint8_t plane_mask);
 extern void VGA_SetBitMask(uint8_t bit_mask);
+
+void VGA_DrawBlock(uint16_t offset, uint8_t bitMask, color_t color);
 extern void VGA_DrawPixel(uint16_t x, uint16_t y, color_t color);
 extern void VGA_DrawRect(uint16_t startx, uint16_t starty, uint16_t sizex, uint16_t sizey, color_t color);
 extern void VGA_DrawChar(uint16_t startx, uint16_t starty, const char character, color_t color);
