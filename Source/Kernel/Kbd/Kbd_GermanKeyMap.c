@@ -35,12 +35,18 @@ static const KeyMap _Kbd_GermanKeyMap = {
   [KEY_V] = { 'v', 'V', 0, 0 },
   [KEY_W] = { 'w', 'W', 0, 0 },
   [KEY_X] = { 'x', 'X', 0, 0 },
-  [KEY_Y] = { 'y', 'Y', 0, 0 },
-  [KEY_Z] = { 'z', 'Z', 0, 0 },
+  [KEY_Y] = { 'z', 'Z', 0, 0 },
+  [KEY_Z] = { 'y', 'Y', 0, 0 },
   [KEY_SPACE] = { ' ', ' ', ' ', ' ' },
   [KEY_PERIOD] = { '.', ':', 0, 0 },
   [KEY_COMMA] = { ',', ';', 0, 0 },
-  [KEY_MINUS] = { '-', '_', 0, 0 }
+  [KEY_SLASH] = { '-', '_', 0, 0 },
+  [KEY_SEMICOLON] = { 'o', 'O', 0, 0},
+  [KEY_GRAVE] = { 'a', 'A', 0, 0 },
+  [KEY_BACKSLASH] = { '#', '\'', 0, 0 },
+  [KEY_RBRACKET] = { '+', '*', 0, '~' },
+  [KEY_LBRACKET] = { 'u', 'U', 0, 0 },
+  [KEY_MINUS] = { '_', '?', 0, '\\'}
 };
 
 char Kbd_GetGermanKeyMapChar(KeyCode keyCode, KeyModifiers modifiers) {
