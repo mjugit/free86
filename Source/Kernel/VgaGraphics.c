@@ -138,12 +138,12 @@ static uint8_t _MonospaceFont8x8[128][8] = {
 static volatile uint8_t *_VideoMemory = (uint8_t*) VIDEO_MEMORY_ADDRESS;
 
 // Helper method for writing to a port
-inline void outb(uint16_t port, uint8_t value) {
+inline void _VGA_WriteByte(uint16_t port, uint8_t value) {
     __asm__ volatile ("outb %1, %0" : : "dN" (port), "a" (value));
 }
 
 // Helper method for reading from a port
-static inline unsigned char inb(unsigned short port) {
+static inline unsigned char _VGA_ReadByte(unsigned short port) {
     unsigned char ret;
     __asm__ volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
@@ -154,16 +154,16 @@ static inline unsigned char inb(unsigned short port) {
 void VGA_SetPlaneMask(uint8_t plane_mask) {
   const uint8_t PLANE_MASK_INDEX = 0x02;
   
-  outb(VGA_SEQUENCER_INDEX, PLANE_MASK_INDEX);
-  outb(VGA_SEQUENCER_DATA, plane_mask);
+  _VGA_WriteByte(VGA_SEQUENCER_INDEX, PLANE_MASK_INDEX);
+  _VGA_WriteByte(VGA_SEQUENCER_DATA, plane_mask);
 }
 
 // Set the bit mask to the given value 
 void VGA_SetBitMask(uint8_t bit_mask) {
   const uint8_t BITMASK_INDEX = 0x08;
 
-  outb(VGA_GRAPHICS_INDEX, BITMASK_INDEX);
-  outb(VGA_GRAPHICS_DATA, bit_mask);
+  _VGA_WriteByte(VGA_GRAPHICS_INDEX, BITMASK_INDEX);
+  _VGA_WriteByte(VGA_GRAPHICS_DATA, bit_mask);
 }
 
 
@@ -174,21 +174,43 @@ void VGA_DrawPixel(uint16_t x, uint16_t y, color_t color) {
   uint8_t bit_position = x % 8;
   uint8_t bit_mask = 1 << (7 - bit_position);
 
+  VGA_DrawBlock(byte_offset, bit_mask, color);
+}
+
+void VGA_DrawBlock(uint16_t offset, uint8_t bitMask, color_t color) {
+  VGA_SetBitMask(bitMask);
   VGA_SetPlaneMask(0xf);
-  VGA_SetBitMask(bit_mask);
-  _VideoMemory[byte_offset] &= ~bit_mask;
-  
+  _VideoMemory[offset] &= ~bitMask;
   VGA_SetPlaneMask(color);
-  _VideoMemory[byte_offset] |= bit_mask;
+  _VideoMemory[offset] |= bitMask;
 }
 
 
 // Draw a rectangle in a specific color
 void VGA_DrawRect(uint16_t startx, uint16_t starty, uint16_t sizex, uint16_t sizey, color_t color) {
-  for (uint16_t posy = starty; posy < starty + sizey; posy++)
-    for (uint16_t posx = startx; posx < startx + sizex; posx++)
-      VGA_DrawPixel(posx, posy, color);
+ uint16_t totalBytesPerRow = VGA_SCREEN_X / 8;
+  uint16_t bytesPerRectRow = (startx + sizex + 7) / 8 - startx / 8;
+  uint16_t startOffsetInBytes = starty * totalBytesPerRow + (startx / 8);
+
+  for (uint16_t yIndex = 0; yIndex < sizey; yIndex++) {
+    for (uint16_t xIndex = 0; xIndex < bytesPerRectRow; xIndex++) {
+      uint8_t bitmask = 0xFF;
+      if (xIndex == 0 && (startx % 8 != 0))
+        bitmask = 0xFF >> (startx % 8);
+      
+
+      if (xIndex == bytesPerRectRow - 1 && ((startx + sizex) % 8 != 0)) {
+        bitmask &= 0xFF << (8 - ((startx + sizex) % 8));
+      }
+
+      VGA_DrawBlock(startOffsetInBytes + xIndex, bitmask, color);
+    }
+
+    startOffsetInBytes += totalBytesPerRow;
+  }
 }
+
+
 
 // Draw a character in a specific color
 void VGA_DrawChar(uint16_t startx, uint16_t starty, const char character, color_t color) {
@@ -230,25 +252,25 @@ void VGA_DrawVerticalLine(uint16_t startx, uint16_t starty, uint16_t sizey, colo
 // Update the color mapping between the 16 color palette and the 256 colors to choose from
 void VGA_PickColor(color_t color, uint8_t palette_index) {
   // REMARK:
-  // The inb() calls below are used to enable the VGA controller before writing.
+  // The _VGA_ReadByte() calls below are used to enable the VGA controller before writing.
 
   // Redefine the color
-  inb(VGA_STATUS);
-  outb(VGA_ATTRIBUTE_INDEX, (color & 0x1f));
-  outb(VGA_ATTRIBUTE_INDEX, (palette_index & 0xff));
+  _VGA_ReadByte(VGA_STATUS);
+  _VGA_WriteByte(VGA_ATTRIBUTE_INDEX, (color & 0x1f));
+  _VGA_WriteByte(VGA_ATTRIBUTE_INDEX, (palette_index & 0xff));
 
   // Set video enable bit
-  inb(VGA_STATUS);
-  outb(VGA_ATTRIBUTE_INDEX, 0x20);
+  _VGA_ReadByte(VGA_STATUS);
+  _VGA_WriteByte(VGA_ATTRIBUTE_INDEX, 0x20);
 }
 
 // Redefine a color in the global palette
 // This method modifies the DAC of the monitor, so the changes are global!
 void VGA_SetPaletteColor(uint8_t palette_index, uint8_t red, uint8_t green, uint8_t blue) {
-  outb(VGA_DAC_INDEX, palette_index);
-  outb(VGA_DAC_DATA, red);
-  outb(VGA_DAC_DATA, green);
-  outb(VGA_DAC_DATA, blue);
+  _VGA_WriteByte(VGA_DAC_INDEX, palette_index);
+  _VGA_WriteByte(VGA_DAC_DATA, red);
+  _VGA_WriteByte(VGA_DAC_DATA, green);
+  _VGA_WriteByte(VGA_DAC_DATA, blue);
 }
 
 
