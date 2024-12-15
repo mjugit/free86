@@ -1,5 +1,12 @@
 #include "../Include/Kbd.h"
 
+/**
+ * @brief Static mapping of scancodes to keycodes.
+ *
+ * This array maps standard scancodes to their corresponding abstract keycodes
+ * as defined in the `KeyCode` enumeration. Extended scancodes (prefixed with `0xE0`)
+ * are handled separately in the `Kbd_GetKeyCode` function.
+ */
 static const KeyCode _Kbd_KeyCodeMap[256] = {
   [SCANCODE_ESC]			  = KEY_ESC,
   [SCANCODE_1]				  = KEY_1,
@@ -89,6 +96,16 @@ static const KeyCode _Kbd_KeyCodeMap[256] = {
 };
 
 
+/**
+ * @brief Translates a scancode to its corresponding keycode.
+ *
+ * This function converts scancodes (raw keyboard input) into abstract keycodes
+ * using a predefined mapping table and additional logic for extended scancodes
+ * prefixed with `0xE0`. Extended scancodes are identified and mapped individually.
+ *
+ * @param scanCode The scancode to translate (8-bit or extended 16-bit value).
+ * @return The corresponding `KeyCode` or `KEY_NONE` if the scancode is invalid or unrecognized.
+ */
 KeyCode Kbd_GetKeyCode(uint16_t scanCode) {
   if (0xe000 & scanCode) {
     // Is extended scancode

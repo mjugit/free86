@@ -1,5 +1,16 @@
 #include "../Include/Kbd.h"
 
+/**
+ * @brief A static German keyboard layout mapping.
+ *
+ * This mapping defines how keycodes correspond to characters on a German keyboard,
+ * including variations for Shift, Alt, and Ctrl modifiers. The `KeyMapEntry` structure
+ * supports up to four different mappings for each key:
+ * - Normal: The default character.
+ * - Shift: The character produced when the Shift modifier is active.
+ * - Ctrl: The character produced when the Ctrl modifier is active.
+ * - Alt: The character produced when the Alt modifier is active.
+ */
 static const KeyMap _Kbd_GermanKeyMap = {
   [KEY_1] = { '1', '!', 0, 0 },
   [KEY_2] = { '2', '"', 0, 0 },
@@ -49,6 +60,22 @@ static const KeyMap _Kbd_GermanKeyMap = {
   [KEY_MINUS] = { '_', '?', 0, '\\'}
 };
 
+
+/**
+ * @brief Gets the character for a keycode and modifier combination.
+ *
+ * This function retrieves the character from the German key map based on the given
+ * `KeyCode` and the active modifiers. It prioritizes modifiers in the following order:
+ * - Shift
+ * - Alt
+ * - Ctrl
+ *
+ * If no modifiers are active, the `Normal` entry from the map is returned.
+ *
+ * @param keyCode The keycode of the key to look up.
+ * @param modifiers The current active key modifiers (Shift, Ctrl, Alt).
+ * @return The character corresponding to the given keycode and modifiers, or `0` if no match is found.
+ */
 char Kbd_GetGermanKeyMapChar(KeyCode keyCode, KeyModifiers modifiers) {
   KeyMapEntry entry = _Kbd_GermanKeyMap[keyCode];
   if (!modifiers)
