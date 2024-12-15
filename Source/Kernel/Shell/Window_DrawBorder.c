@@ -24,20 +24,20 @@ void Window_DrawBorder(Window *window) {
     uint16_t borderLeftTopY = window->LocationY + WIN_HEADER_HEIGHT;
     uint16_t borderLeftSizeY = window->SizeY - WIN_HEADER_HEIGHT;
     
-    VGA_SetRect(borderLeftTopX, borderLeftTopY, WIN_BORDER_WIDTH, borderLeftSizeY, BorderColor);
+    VGA_SetRect(borderLeftTopX, borderLeftTopY, WIN_BORDER_WIDTH, borderLeftSizeY, Blue);
 
     // Draw the right border
     uint16_t borderRightTopX = window->LocationX + window->SizeX - WIN_BORDER_WIDTH;
     uint16_t borderRightTopY = window->LocationY + WIN_HEADER_HEIGHT;
     uint16_t borderRightSizeY = window->SizeY - WIN_HEADER_HEIGHT;
     
-    VGA_SetRect(borderRightTopX, borderRightTopY, WIN_BORDER_WIDTH, borderRightSizeY, BorderColor);
+    VGA_SetRect(borderRightTopX, borderRightTopY, WIN_BORDER_WIDTH, borderRightSizeY, Blue);
 
     // Draw the bottom border
     uint16_t borderBottomTopX = window->LocationX + WIN_BORDER_WIDTH;
     uint16_t borderBottomTopY = window->SizeY + window->LocationY - WIN_BORDER_WIDTH;
     uint16_t borderBottomSizeX = window->SizeX - (WIN_BORDER_WIDTH * 2);
 
-    VGA_SetRect(borderBottomTopX, borderBottomTopY, borderBottomSizeX, WIN_BORDER_WIDTH, BorderColor);
+    VGA_SetRect(borderBottomTopX, borderBottomTopY, borderBottomSizeX, WIN_BORDER_WIDTH, Blue);
 }
 

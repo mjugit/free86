@@ -32,7 +32,7 @@ struct IdtDescriptor IdtPointer;
  * @param value The byte value to write.
  */
 static inline void _INT_WriteByte(uint16_t port, uint8_t value) {
-    __asm__ volatile ("_INT_WriteByte %1, %0" : : "dN" (port), "a" (value));
+    __asm__ volatile ("outb %1, %0" : : "dN" (port), "a" (value));
 }
 
 

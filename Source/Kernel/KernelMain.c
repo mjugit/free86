@@ -10,12 +10,27 @@ int posx = 0;
 int posy = 0;
 
 void EventHandler(KeyEventArgs args) {
- 
+  
+  if (args.KeyCode == KEY_DOWN) {
+    if (posy < 480 / 8)
+      posy +=8;
+    return;
+  }
+
+  if (args.KeyCode == KEY_UP) {
+    if (posy >= 8)
+      posy -=8;
+    return;
+  }
+  
   char c = Kbd_GetGermanKeyMapChar(args.KeyCode, *args.Modifiers);
+  
   if (c) {
-    VGA_DrawChar(posx, posy, c, White);
+    VGA_SetBlock(posx, posy, Black);
+    VGA_PrintChar(posx, posy, c, White);
     posx += 8;
   }
+  
 }
 
 
