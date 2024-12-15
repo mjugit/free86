@@ -1,9 +1,47 @@
 #include "Include/VgaGraphics.h"
 
 
+/**
+ * @brief The width of a single character in pixels for the monospace font.
+ * @def CHAR_WIDTH
+ *
+ * This constant defines the horizontal size of each character in the
+ * 8x8 monospace font used for rendering text in VGA modes.
+ * Each character is exactly 8 pixels wide.
+ */
 #define CHAR_WIDTH 8
 
-static uint8_t _MonospaceFont8x8[128][8] = {
+
+
+/**
+ * @brief The number of bytes per row in VGA planar graphics mode.
+ *
+ * In VGA planar graphics mode, each row of pixels is represented by
+ * a number of bytes. Each byte encodes 8 pixels (1 bit per pixel per plane),
+ * and the total bytes per row is calculated by dividing the screen width
+ * (in pixels) by 8.
+ */
+static const uint16_t VGA_BYTES_PER_ROW = VGA_SCREEN_X / 8;
+
+
+/**
+ * @brief 8x8 pixel monospace font bitmap for ASCII characters.
+ *
+ * This array contains the 8x8 pixel bitmaps for the first 128 ASCII characters.
+ * Each character is represented by 8 bytes, where each byte corresponds to
+ * one row of the character. Each bit in a byte represents a single pixel:
+ * - `1` indicates that the pixel is "on".
+ * - `0` indicates that the pixel is "off".
+ *
+ * The character encoding follows the standard ASCII table:
+ * - Index `0x00` corresponds to the null character (NUL).
+ * - Index `0x20` corresponds to a space (' ').
+ * - Index `0x41` corresponds to the letter 'A'.
+ *
+ * This font is commonly used for text rendering in VGA modes that support
+ * character-based or planar graphics rendering.
+ */
+static const uint8_t _MonospaceFont8x8[128][8] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0000 (nul)
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0001
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0002
@@ -134,50 +172,155 @@ static uint8_t _MonospaceFont8x8[128][8] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}    // U+007F
 };
 
-// A pointer to the video memory
+
+
+/**
+ * @brief Pointer to the starting address of the VGA video memory buffer.
+ *
+ * This pointer references the beginning of the VGA framebuffer memory,
+ * allowing direct pixel manipulation. Each bit corresponds to a specific
+ * pixel, since we use planar graphics mode with 4 bit color depth.
+ */
 static volatile uint8_t *_VideoMemory = (uint8_t*) VIDEO_MEMORY_ADDRESS;
 
-// Helper method for writing to a port
+
+
+
+/**
+ * @brief Writes a single byte value to the specified VGA port.
+ *
+ * This function outputs an 8-bit value to a given VGA I/O port.
+ * It uses inline assembly with the `outb` instruction to send
+ * the specified value to the given port.
+ *
+ * @param port The VGA port to which the byte will be written.
+ * @param value The 8-bit value to be sent.
+ */
 inline void _VGA_WriteByte(uint16_t port, uint8_t value) {
     __asm__ volatile ("outb %1, %0" : : "dN" (port), "a" (value));
 }
 
-// Helper method for reading from a port
-static inline unsigned char _VGA_ReadByte(unsigned short port) {
-    unsigned char ret;
+
+/**
+ * @brief Reads a single byte from the specified VGA port.
+ *
+ * This function retrieves an 8-bit value from a given VGA I/O port.
+ * It uses inline assembly with the `inb` instruction to read the
+ * byte from the provided port.
+ *
+ * @param port The VGA port from which the byte will be read.
+ * @return The 8-bit value read from the specified port.
+ */
+static inline unsigned char _VGA_ReadByte(uint16_t port) {
+    uint8_t ret;
     __asm__ volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
 
 
-// Set the plane mask to the given value
-void VGA_SetPlaneMask(uint8_t plane_mask) {
+
+
+/**
+ * @brief Sets the VGA plane mask register.
+ *
+ * The plane mask determines which VGA memory planes are writable.
+ *
+ * @param planeMask A bitmask where each bit enables or disables
+ *                  writing to a specific memory plane (0-3).
+ */
+void VGA_SetPlaneMask(uint8_t planeMask) {
+  // Sequencer index for the plane mask register.
   const uint8_t PLANE_MASK_INDEX = 0x02;
   
   _VGA_WriteByte(VGA_SEQUENCER_INDEX, PLANE_MASK_INDEX);
-  _VGA_WriteByte(VGA_SEQUENCER_DATA, plane_mask);
+  _VGA_WriteByte(VGA_SEQUENCER_DATA, planeMask);
 }
 
-// Set the bit mask to the given value 
-void VGA_SetBitMask(uint8_t bit_mask) {
+
+/**
+ * @brief Sets the VGA bit mask register.
+ *
+ * The bit mask determines which bits within a memory plane are affected
+ * during write operations. It allows selective manipulation of pixel data
+ * at a finer granularity than the plane mask.
+ *
+ * @param bitMask A bitmask where each bit enables or disables writing
+ *                to a specific bit position (0-7) within the targeted plane.
+ */
+void VGA_SetBitMask(uint8_t bitMask) {
+  // Graphics controller index for the bit mask register.
   const uint8_t BITMASK_INDEX = 0x08;
 
   _VGA_WriteByte(VGA_GRAPHICS_INDEX, BITMASK_INDEX);
-  _VGA_WriteByte(VGA_GRAPHICS_DATA, bit_mask);
+  _VGA_WriteByte(VGA_GRAPHICS_DATA, bitMask);
 }
 
 
-// Draw a single pixel at the coordinates in a specific color
-void VGA_DrawPixel(uint16_t x, uint16_t y, color_t color) {
-  uint16_t bytes_per_row = VGA_SCREEN_X / 8;
-  uint16_t byte_offset = (y * bytes_per_row) + (x / 8);
-  uint8_t bit_position = x % 8;
-  uint8_t bit_mask = 1 << (7 - bit_position);
 
-  VGA_DrawBlock(byte_offset, bit_mask, color);
+
+/**
+ * @brief Sets a color in the VGA palette.
+ *
+ * This function updates a specific color in the VGA Digital-to-Analog Converter (DAC) palette.
+ * VGA palette colors are defined using 6-bit values for each of the red, green, and blue channels.
+ *
+ * @param index The palette index (0-255) to be updated.
+ * @param red64 The intensity of the red channel (0-63).
+ * @param green64 The intensity of the green channel (0-63).
+ * @param blue64 The intensity of the blue channel (0-63).
+ */
+void VGA_SetPaletteColor(uint8_t index, uint8_t red64, uint8_t green64, uint8_t blue64) {
+  _VGA_WriteByte(VGA_DAC_INDEX, index);
+  _VGA_WriteByte(VGA_DAC_DATA, red64);
+  _VGA_WriteByte(VGA_DAC_DATA, green64);
+  _VGA_WriteByte(VGA_DAC_DATA, blue64);
 }
 
-void VGA_DrawBlock(uint16_t offset, uint8_t bitMask, color_t color) {
+
+/**
+ * @brief Updates the color mapping between the 16-color palette and the 256 colors available in VGA.
+ *
+ * This function assigns a specific color from the 256-color VGA palette to one of the 16 hardware
+ * palette entries used for indexed color modes. It enables and configures the VGA attribute controller
+ * for this purpose.
+ *
+ * @param color The 5-bit index (0-31) of the hardware palette entry to redefine.
+ * @param paletteIndex The 8-bit index (0-255) of the color in the VGA palette to assign.
+ *
+ * @remark The calls to `_VGA_ReadByte()` are necessary to synchronize the VGA controller
+ *         and ensure the attribute controller is ready for configuration.
+ */
+void VGA_PickColor(color_t color, uint8_t paletteIndex) {
+    // Synchronize with the VGA controller by reading the status port
+    _VGA_ReadByte(VGA_STATUS);
+
+    // Redefine the color mapping
+    _VGA_WriteByte(VGA_ATTRIBUTE_INDEX, (color & 0x1f));
+    _VGA_WriteByte(VGA_ATTRIBUTE_INDEX, (paletteIndex & 0xff));
+
+    // Enable video output by setting the video enable bit
+    _VGA_ReadByte(VGA_STATUS);
+    _VGA_WriteByte(VGA_ATTRIBUTE_INDEX, 0x20);
+}
+
+
+
+
+/**
+ * @brief Sets a block of pixels in VGA planar graphics mode.
+ *
+ * This function modifies a block of pixels at a specified memory offset.
+ * It uses a bitmask to determine which bits (pixels) within a byte should
+ * be affected and assigns them a specified color. The function handles
+ * both clearing and setting the pixels in a memory-efficient manner.
+ *
+ * @param offset The memory offset in the VGA framebuffer where the block resides.
+ * @param bitMask A bitmask indicating which pixels (bits) in the byte should be modified.
+ *                Each bit corresponds to a pixel in planar graphics mode.
+ * @param color The VGA plane mask (0-15) that determines which color planes are affected.
+ *              This effectively sets the pixel color.
+ */
+void VGA_SetBlock(uint16_t offset, uint8_t bitMask, color_t color) {
   VGA_SetBitMask(bitMask);
   VGA_SetPlaneMask(0xf);
   _VideoMemory[offset] &= ~bitMask;
@@ -186,11 +329,43 @@ void VGA_DrawBlock(uint16_t offset, uint8_t bitMask, color_t color) {
 }
 
 
-// Draw a rectangle in a specific color
-void VGA_DrawRect(uint16_t startx, uint16_t starty, uint16_t sizex, uint16_t sizey, color_t color) {
- uint16_t totalBytesPerRow = VGA_SCREEN_X / 8;
+/**
+ * @brief Sets a single pixel to a specified color in VGA planar graphics mode.
+ *
+ * This function calculates the memory location and bit position of a pixel
+ * based on its (x, y) coordinates and sets it to the specified color. It uses
+ * `VGA_SetBlock` to apply the appropriate bitmask and color.
+ *
+ * @param x The horizontal coordinate of the pixel (0 to VGA_SCREEN_X - 1).
+ * @param y The vertical coordinate of the pixel (0 to VGA_SCREEN_Y - 1).
+ * @param color The VGA plane mask (0-15) that determines the color of the pixel.
+ */
+void VGA_SetPixel(uint16_t x, uint16_t y, color_t color) {
+  uint16_t byte_offset = (y * VGA_BYTES_PER_ROW) + (x / 8);
+  uint8_t bit_position = x % 8;
+  uint8_t bit_mask = 1 << (7 - bit_position);
+
+  VGA_SetBlock(byte_offset, bit_mask, color);
+}
+
+
+/**
+ * @brief Draws a filled rectangle in VGA planar graphics mode.
+ *
+ * This function renders a filled rectangle of a given size and color,
+ * starting at a specific (x, y) position. It calculates the necessary
+ * bitmasks for bytes at the rectangle's edges and ensures proper alignment
+ * for non-byte-aligned coordinates.
+ *
+ * @param startx The horizontal coordinate of the rectangle's top-left corner.
+ * @param starty The vertical coordinate of the rectangle's top-left corner.
+ * @param sizex The width of the rectangle in pixels.
+ * @param sizey The height of the rectangle in pixels.
+ * @param color The VGA plane mask (0-15) that determines the color of the rectangle.
+ */
+void VGA_SetRect(uint16_t startx, uint16_t starty, uint16_t sizex, uint16_t sizey, color_t color) {
   uint16_t bytesPerRectRow = (startx + sizex + 7) / 8 - startx / 8;
-  uint16_t startOffsetInBytes = starty * totalBytesPerRow + (startx / 8);
+  uint16_t startOffsetInBytes = starty * VGA_BYTES_PER_ROW + (startx / 8);
 
   for (uint16_t yIndex = 0; yIndex < sizey; yIndex++) {
     for (uint16_t xIndex = 0; xIndex < bytesPerRectRow; xIndex++) {
@@ -198,23 +373,36 @@ void VGA_DrawRect(uint16_t startx, uint16_t starty, uint16_t sizex, uint16_t siz
       if (xIndex == 0 && (startx % 8 != 0))
         bitmask = 0xFF >> (startx % 8);
       
-
-      if (xIndex == bytesPerRectRow - 1 && ((startx + sizex) % 8 != 0)) {
+      if (xIndex == bytesPerRectRow - 1 && ((startx + sizex) % 8 != 0))
         bitmask &= 0xFF << (8 - ((startx + sizex) % 8));
-      }
-
-      VGA_DrawBlock(startOffsetInBytes + xIndex, bitmask, color);
+      
+      VGA_SetBlock(startOffsetInBytes + xIndex, bitmask, color);
     }
 
-    startOffsetInBytes += totalBytesPerRow;
+    startOffsetInBytes += VGA_BYTES_PER_ROW;
   }
 }
 
 
 
-// Draw a character in a specific color
-void VGA_DrawChar(uint16_t startx, uint16_t starty, const char character, color_t color) {
-  uint8_t *bitmap = _MonospaceFont8x8[(uint8_t)character];
+
+/**
+ * @brief Draws a single character on the screen in a specific color.
+ *
+ * This function renders a character from the monospace font at a specified
+ * (x, y) position on the screen. It retrieves the 8x8 bitmap for the character
+ * and uses the `VGA_DrawPixel` function to draw each pixel in the specified color.
+ *
+ * @param startx The horizontal coordinate of the top-left corner of the character.
+ * @param starty The vertical coordinate of the top-left corner of the character.
+ * @param character The ASCII character to be drawn.
+ * @param color The VGA plane mask (0-15) that determines the color of the character.
+ *
+ * @note Ensure that `startx` and `starty` are within the screen bounds to avoid
+ *       out-of-bounds memory access.
+ */
+void VGA_PrintChar(uint16_t startx, uint16_t starty, const char character, color_t color) {
+  const uint8_t *bitmap = _MonospaceFont8x8[(uint8_t)character];
   
   for (uint16_t row = 0; row < 8; row++) {
     uint16_t current_row = starty + row + 1;
@@ -225,56 +413,83 @@ void VGA_DrawChar(uint16_t startx, uint16_t starty, const char character, color_
       uint8_t bitmask = 1 << col;
       
       if (bitmap_row & bitmask)
-	VGA_DrawPixel(current_col, current_row, color);
+	VGA_SetPixel(current_col, current_row, color);
     }
   }
 }
 
-// Draw a string in a specific color
-void VGA_DrawString(uint16_t  startx, uint16_t starty, const char *text, color_t color) {
-  for (short index = 0; text[index]; index++)
-    VGA_DrawChar(startx + (index * CHAR_WIDTH), starty, text[index], color);
+
+/**
+ * @brief Draws a string on the screen in a specific color.
+ *
+ * This function renders a null-terminated string starting at the specified
+ * (x, y) position. Each character is drawn using the `VGA_DrawChar` function,
+ * and characters are spaced according to the monospace font's width.
+ *
+ * @param startx The horizontal coordinate of the top-left corner of the string.
+ * @param starty The vertical coordinate of the top-left corner of the string.
+ * @param text A pointer to the null-terminated string to be drawn.
+ * @param color The VGA plane mask (0-15) that determines the color of the string.
+ *
+ * @note Ensure that the string fits within the screen bounds. Line wrapping is
+ *       not handled by this function.
+ */
+void VGA_PrintString(uint16_t startx, uint16_t starty, const char *text, color_t color) {
+    for (short index = 0; text[index]; index++) {
+        VGA_PrintChar(startx + (index * CHAR_WIDTH), starty, text[index], color);
+    }
 }
 
-// Draw a horizontal line
+
+/**
+ * @brief Draws a horizontal line on the screen.
+ *
+ * This function draws a straight horizontal line starting from the specified
+ * (x, y) position, extending for the given width in pixels, and using the specified color.
+ *
+ * @param startx The horizontal starting position of the line.
+ * @param starty The vertical position of the line.
+ * @param sizex The width of the line in pixels.
+ * @param color The VGA plane mask (0-15) that determines the color of the line.
+ */
 void VGA_DrawHorizontalLine(uint16_t startx, uint16_t starty, uint16_t sizex, color_t color) {
-  for (uint16_t posx = startx; posx < startx + sizex; posx++)
-    VGA_DrawPixel(posx, starty, color);
+    for (uint16_t posx = startx; posx < startx + sizex; posx++) {
+        VGA_SetPixel(posx, starty, color);
+    }
 }
 
-// Draw a vertical line
+
+/**
+ * @brief Draws a vertical line on the screen.
+ *
+ * This function draws a straight vertical line starting from the specified
+ * (x, y) position, extending for the given height in pixels, and using the specified color.
+ *
+ * @param startx The horizontal position of the line.
+ * @param starty The vertical starting position of the line.
+ * @param sizey The height of the line in pixels.
+ * @param color The VGA plane mask (0-15) that determines the color of the line.
+ */
 void VGA_DrawVerticalLine(uint16_t startx, uint16_t starty, uint16_t sizey, color_t color) {
-  for (uint16_t posy = starty; posy < starty + sizey; posy++)
-    VGA_DrawPixel(startx, posy, color);
+    for (uint16_t posy = starty; posy < starty + sizey; posy++) {
+        VGA_SetPixel(startx, posy, color);
+    }
 }
 
 
-// Update the color mapping between the 16 color palette and the 256 colors to choose from
-void VGA_PickColor(color_t color, uint8_t palette_index) {
-  // REMARK:
-  // The _VGA_ReadByte() calls below are used to enable the VGA controller before writing.
-
-  // Redefine the color
-  _VGA_ReadByte(VGA_STATUS);
-  _VGA_WriteByte(VGA_ATTRIBUTE_INDEX, (color & 0x1f));
-  _VGA_WriteByte(VGA_ATTRIBUTE_INDEX, (palette_index & 0xff));
-
-  // Set video enable bit
-  _VGA_ReadByte(VGA_STATUS);
-  _VGA_WriteByte(VGA_ATTRIBUTE_INDEX, 0x20);
-}
-
-// Redefine a color in the global palette
-// This method modifies the DAC of the monitor, so the changes are global!
-void VGA_SetPaletteColor(uint8_t palette_index, uint8_t red, uint8_t green, uint8_t blue) {
-  _VGA_WriteByte(VGA_DAC_INDEX, palette_index);
-  _VGA_WriteByte(VGA_DAC_DATA, red);
-  _VGA_WriteByte(VGA_DAC_DATA, green);
-  _VGA_WriteByte(VGA_DAC_DATA, blue);
-}
 
 
-// Load and configure the default system colors.
+/**
+ * @brief Initializes the default system color palette.
+ *
+ * This function configures the VGA palette with a predefined set of 16 colors.
+ * It assigns RGB values to the 256-color VGA palette and maps the first 16
+ * palette entries to standard color names (e.g., Black, Red, Green).
+ * These colors are commonly used in text mode and graphical interfaces.
+ *
+ * The colors are initialized using `VGA_SetPaletteColor` to define the RGB values
+ * and `VGA_PickColor` to map them to the 16-color hardware palette.
+ */
 void VGA_InitializeColorPalette(void) {
   VGA_SetPaletteColor(0, 9, 10, 11);
   VGA_PickColor(Black, 0);
@@ -325,6 +540,18 @@ void VGA_InitializeColorPalette(void) {
   VGA_PickColor(White, 15);
 }
 
+
+/**
+ * @brief Draws a test image to validate VGA drawing functionality.
+ *
+ * This function creates a test pattern consisting of two rows of colored rectangles
+ * and displays text in all 16 colors of the VGA palette. It is intended for verifying
+ * that colors, shapes, and text rendering work as expected in VGA mode.
+ *
+ * The test image includes:
+ * - 16 rectangles (8 per row), each 45x45 pixels, drawn in sequential VGA colors.
+ * - Two lines of text in each of the 16 colors, showcasing uppercase and lowercase letters.
+ */
 void VGA_DrawTestImage(void) {
   color_t color = 0;
   int posx = 100;
@@ -333,7 +560,7 @@ void VGA_DrawTestImage(void) {
   for (int row = 0; row < 2; row++) {
     for (int box = 0; box < 8; box++) {
 
-      VGA_DrawRect(posx, posy, 45, 45, color);
+      VGA_SetRect(posx, posy, 45, 45, color);
       posx += 50;
       color++;
     }
@@ -342,7 +569,7 @@ void VGA_DrawTestImage(void) {
   }
 
   for (color_t textcolor = 0; textcolor < 16; textcolor++) {
-    VGA_DrawString(50, 200 + (textcolor * 14), "ABCDEFGHIJKLMNOPQRSTUVWXYZ\0", textcolor);
-    VGA_DrawString(300, 200 + (textcolor * 14), "abcdefghijklmnopqrstuvwxyz\0", textcolor);
+    VGA_PrintString(50, 200 + (textcolor * 14), "ABCDEFGHIJKLMNOPQRSTUVWXYZ\0", textcolor);
+    VGA_PrintString(300, 200 + (textcolor * 14), "abcdefghijklmnopqrstuvwxyz\0", textcolor);
   }
 } 
