@@ -4,11 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'Source/'
-      - 'Tools/Makefile'
-      - 'Tools/*.mk'
-      - '.github/workflows/i386-toolchain-build.yml'
 
 jobs:
   build-toolchain:
