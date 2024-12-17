@@ -491,7 +491,7 @@ void VGA_DrawVerticalLine(uint16_t startx, uint16_t starty, uint16_t sizey, colo
  * and `VGA_PickColor` to map them to the 16-color hardware palette.
  */
 void VGA_InitializeColorPalette(void) {
-  VGA_SetPaletteColor(0, 9, 10, 11);
+  VGA_SetPaletteColor(0, 5, 5, 5);
   VGA_PickColor(Black, 0);
   
   VGA_SetPaletteColor(1, 40, 16, 16);
@@ -512,7 +512,7 @@ void VGA_InitializeColorPalette(void) {
   VGA_SetPaletteColor(6, 23, 35, 33);
   VGA_PickColor(Cyan, 6);
   
-  VGA_SetPaletteColor(7, 28, 30, 32);
+  VGA_SetPaletteColor(7, 49, 50, 49);
   VGA_PickColor(LightGray, 7);
   
   VGA_SetPaletteColor(8, 13, 14, 16);
@@ -536,7 +536,7 @@ void VGA_InitializeColorPalette(void) {
   VGA_SetPaletteColor(14, 34, 47, 45);
   VGA_PickColor(LightCyan, 14);
   
-  VGA_SetPaletteColor(15, 49, 50, 49);
+  VGA_SetPaletteColor(15, 63, 63, 63);
   VGA_PickColor(White, 15);
 }
 
