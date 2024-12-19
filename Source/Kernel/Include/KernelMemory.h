@@ -47,4 +47,21 @@ extern void KMem_Free(void *chunk);
 extern uint32_t KMem_GetBytesFree(void);
 
 
+/**
+ * @brief Copies a specified number of bytes from a source to a destination memory location.
+ *
+ * This function uses optimized assembly instructions (`movsd` and `movsb`) to perform the
+ * copy operation in two stages:
+ * - First, it copies 4-byte words (dwords) using `rep movsd`.
+ * - Then, it copies any remaining bytes using `rep movsb`.
+ *
+ * @param dest Pointer to the destination memory where data will be copied.
+ * @param src  Pointer to the source memory from where data will be copied.
+ * @param count The number of bytes to copy.
+ *
+ * @note The memory regions pointed to by `dest` and `src` should not overlap.
+ *       If overlapping memory regions are possible, use a function like `memmove`.
+ */
+extern void KMem_Copy(void *dest, const void *src, unsigned int count);
+
 #endif
