@@ -302,4 +302,40 @@ extern void FVGA_DrawRectWithBlending(int x, int y, int width, int height, uint8
  */
 extern void FVGA_DrawLine(int x1, int y1, int x2, int y2, uint8_t color);
 
+
+/**
+ * @brief Draws a single 8x8 character onto the VGA render buffer.
+ *
+ * This function renders a character from a predefined 8x8 font at the specified
+ * screen coordinates and color. Each pixel of the character is mapped to the VGA
+ * planar memory system for accurate representation.
+ *
+ * @param x         The x-coordinate of the top-left corner of the character.
+ * @param y         The y-coordinate of the top-left corner of the character.
+ * @param character The ASCII character to render (range: 0-127).
+ * @param color     The 4-bit planar VGA color to use (one bit per plane).
+ *
+ * @note This function only modifies the render buffer. Call `FVGA_RefreshScreen()` 
+ *       to display the changes on the screen.
+ */
+extern void FVGA_DrawChar(int x, int y, char character, uint8_t color);
+
+
+/**
+ * @brief Draws a null-terminated string onto the VGA render buffer.
+ *
+ * This function renders a string of characters using the `FVGA_DrawChar` function,
+ * starting at the specified coordinates. If the string exceeds the screen width, 
+ * it wraps to the next line.
+ *
+ * @param x       The x-coordinate of the top-left corner where the string starts.
+ * @param y       The y-coordinate of the top-left corner where the string starts.
+ * @param string  A null-terminated string to be drawn.
+ * @param color   The 4-bit planar VGA color to use for the text.
+ *
+ * @note This function only modifies the render buffer. Call `FVGA_RefreshScreen()` 
+ *       to display the changes on the screen.
+ */
+extern void FVGA_DrawString(int x, int y, const char *string, uint8_t color);
+
 #endif
