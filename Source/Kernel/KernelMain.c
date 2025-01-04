@@ -1,4 +1,3 @@
-#include "Include/VgaGraphics.h"
 #include "Include/Interrupt.h"
 #include "Include/Kbd.h"
 #include "Include/Shell.h"
@@ -10,55 +9,46 @@
 
 extern uint16_t SystemLowMemoryKiB;
 
+void _Kernel_InitializeInterrupts(void) {
+  INT_InitializeIDT();
+  INT_InitializePIC(0xfd, 0xff);
+  INT_EnableInterrupts();  
+}
 
-int posx = 0;
-int posy = 0;
-
-void EventHandler(KeyEventArgs args) {
-  FVGA_RefreshScreen();
-  return;
-  
-  if (args.KeyCode == KEY_DOWN) {
-    if (posy < 480 / 8)
-      posy +=8;
-    return;
-  }
-
-  if (args.KeyCode == KEY_UP) {
-    if (posy >= 8)
-      posy -=8;
-    return;
-  }
-  
-  char c = Kbd_GetGermanKeyMapChar(args.KeyCode, *args.Modifiers);
-  
-  if (c) {
-    VGA_SetBlock(posx, posy, Black);
-    VGA_PrintChar(posx, posy, c, White);
-    posx += 8;
-  }
-  
+void _Kernel_InitializeHeap(void) {
+  void *heapStart = (void*)0xf000;
+  KMem_Initialize(heapStart, (SystemLowMemoryKiB - 64) * 1024);
 }
 
 
-
 void KernelMain(void) {
-  VGA_InitializeColorPalette();
+  _Kernel_InitializeInterrupts();
+  _Kernel_InitializeHeap();
 
-  INT_InitializeIDT();
-  INT_InitializePIC(0xfd, 0xff);
-  INT_EnableInterrupts();
-
-  KMem_Initialize((void*)0xf000, (SystemLowMemoryKiB - 64) * 1024);
   FVGA_Initialize();
-  Kbd_SetKeyDownCallback(EventHandler);
-  FVGA_DrawRect(0, 0, 640, 480, 3);
 
-  for (int i = 10; i < 480; i += 5) {
-    FVGA_DrawRectWithBlending(0, i, 640, 10, 1, i / 4);
+  const uint8_t BLUE = 1;
+  const uint8_t GREEN = 2;
+  const uint8_t RED = 4;
+
+  FVGA_SetPaletteColor(RED, (Rgb64) { 63, 30, 30 });
+  FVGA_SetPaletteColor(BLUE, (Rgb64) { 30, 30, 63 });
+  FVGA_SetPaletteColor(GREEN, (Rgb64) { 30, 63, 30 });
+  
+  FVGA_UsePaletteColor(RED, RED);
+  FVGA_UsePaletteColor(BLUE, BLUE);
+  FVGA_UsePaletteColor(GREEN, GREEN);
+  
+  FVGA_DrawRect(0, 0, 640, 480, RED);
+  for (uint16_t y = 0; y < 480; y++) {
+    FVGA_DrawRectWithBlending(0, y, 320, 1, BLUE, (y / 2) % 255);
   }
 
-  VGA_DrawTestImage();
+  for (uint16_t y = 0; y < 480; y++) {
+    FVGA_DrawRectWithBlending(320, y, 320, 1, GREEN, (y / 2) % 255);
+  }
+  
+  FVGA_RefreshScreen();
   
   // halt forever
   while (1) __asm__ __volatile__("hlt");
