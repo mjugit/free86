@@ -14,7 +14,7 @@
 static const KeyMap _Kbd_GermanKeyMap = {
   [KEY_1] = { '1', '!', 0, 0 },
   [KEY_2] = { '2', '"', 0, 0 },
-  [KEY_3] = { '3', '§', 0, 0 },
+  [KEY_3] = { '3', 0, 0, 0 },
   [KEY_4] = { '4', '$', 0, 0 },
   [KEY_5] = { '5', '%', 0, 0 },
   [KEY_6] = { '6', '&', 0, 0 },
@@ -26,7 +26,7 @@ static const KeyMap _Kbd_GermanKeyMap = {
   [KEY_B] = { 'b', 'B', 0, 0 },
   [KEY_C] = { 'c', 'C', 0, 0 },
   [KEY_D] = { 'd', 'D', 0, 0 },
-  [KEY_E] = { 'e', 'E', 0, '€' },
+  [KEY_E] = { 'e', 'E', 0, 0 },
   [KEY_F] = { 'f', 'F', 0, 0 },
   [KEY_G] = { 'g', 'G', 0, 0 },
   [KEY_H] = { 'h', 'H', 0, 0 },
@@ -87,4 +87,6 @@ char Kbd_GetGermanKeyMapChar(KeyCode keyCode, KeyModifiers modifiers) {
     return entry.Alt;
   if (modifiers & Ctrl)
     return entry.Ctrl;
+
+  return 0;
 }
