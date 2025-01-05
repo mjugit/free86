@@ -338,4 +338,36 @@ extern void FVGA_DrawChar(int x, int y, char character, uint8_t color);
  */
 extern void FVGA_DrawString(int x, int y, const char *string, uint8_t color);
 
+
+/**
+ * @brief Sets a specific block in the VGA render buffer with the given color and bitmask.
+ *
+ * This function modifies a single block (byte) of the VGA render buffer, applying the specified
+ * bitmask to determine which bits are affected and setting them to the provided color.
+ *
+ * @param blockOffset The offset (in bytes) within the render buffer to modify.
+ * @param bitmask     A bitmask specifying which bits in the block should be modified (0-255).
+ * @param color       The 4-bit planar VGA color to apply to the specified bits.
+ *
+ * @note This function directly modifies the render buffer. To display the changes, call 
+ *       `FVGA_RefreshScreen()`.
+ */
+extern void FVGA_SetBlock(uint16_t blockOffset, uint8_t bitmask, uint8_t color);
+
+
+/**
+ * @brief Sets a single pixel in the VGA render buffer to the specified color.
+ *
+ * This function calculates the byte offset and bit position of the pixel in the VGA
+ * planar memory layout and uses `FVGA_SetBlock` to update the render buffer.
+ *
+ * @param x     The x-coordinate of the pixel (0-based).
+ * @param y     The y-coordinate of the pixel (0-based).
+ * @param color The 4-bit planar VGA color to apply to the pixel.
+ *
+ * @note This function modifies the render buffer only. Call `FVGA_RefreshScreen()`
+ *       to display the changes on the screen.
+ */
+extern void FVGA_SetPixel(uint16_t x, uint16_t y,  uint8_t color);
+
 #endif
