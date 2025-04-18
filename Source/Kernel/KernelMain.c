@@ -1,6 +1,5 @@
 #include "Include/Interrupt.h"
 #include "Include/Kbd.h"
-#include "Include/Shell.h"
 #include "Include/KernelMemory.h"
 #include "Include/FastVga.h"
 
