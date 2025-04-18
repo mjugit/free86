@@ -97,6 +97,15 @@ Bootloader_EntryPoint:
 	sti
 
 
+	call Bootloader_ResetCursor
+	call Bootloader_ClearScreen
+
+	lea BootMessage_Title, %si
+	call Bootloader_PrintString
+
+	call Bootloader_LoadKernel
+	jmp KernelEntryAddress
+
 
 
 Bootloader_ResetCursor:
