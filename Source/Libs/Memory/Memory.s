@@ -89,34 +89,33 @@ _Memory_Copy:
 _Memory_Set:	
 
 	pushl %ebp
-	movl %esp, %ebp
+	movl  %esp, %ebp
 
 	// Load params
+	movl  8(%ebp), %edi    // Destination
+	movb 12(%ebp), %al     // Value (low byte of eax)
+	movl 16(%ebp), %ecx    // Byte count
 
-	movl 8(%ebp), %edi	// Destination
-	movb 12(%ebp), %al	// Value
-	movl 16(%ebp), %ecx	// Byte count
+	cld
 
-	cld			// Clear direction flag (forward)
-
-	// Construct a dword in eax
-	
+	// Construct a dword pattern in eax
 	movl %eax, %edx
 	shll $8, %edx
-	orl %eax, %edx
+	orl  %eax, %edx
 	shll $16, %edx
-	orl %eax, %edx
+	orl  %eax, %edx
 
-	// Prepare to write dwords
-	
-	movl %ecx, %eax
-	shrl $2, %ecx		// Calculate dwords to copy
-	rep stosl		// Write dwords
+	// Save original count
+	movl %ecx, %ebx
+
+	// Prepare for dword writes
+	movl %edx, %eax        // stosl uses eax
+	shrl $2, %ecx
+	rep stosl
 
 	// Write remaining bytes
-	
-	movl %eax, %ecx
-	andl $3, %ecx		// Calculate remaining bytes
+	movl %ebx, %ecx
+	andl $3, %ecx
 	movb 12(%ebp), %al
 	rep stosb
 
@@ -131,70 +130,69 @@ _Memory_Set:
 	performance. This method provides overlap protection and will
 	reverse the copy direction if required.
 	*/
-	
+
 _Memory_Move:
 
 	pushl %ebp
-	movl %esp, %ebp
+	movl  %esp, %ebp
 
 	// Load params
 
-	movl 8(%ebp), %edi	// Destination
-	movl 12(%ebp), %esi	// Source
-	movl 16(%ebp), %ecx	// Byte count
+	movl  8(%ebp), %esi    // Source
+	movl 12(%ebp), %edi    // Destination
+	movl 16(%ebp), %ecx    // Byte count
 
-	cld			// Clear direction flag (forward)
+	cld                    // Clear direction flag (forward)
 
 	// Check for overlap
-	
-	cmpl %esi, %edi		// Check if backward copy required
-	jae 2f
+	cmpl %esi, %edi        // If destination is before source
+	jb   1f                // => forward copy
 
-1:	// Forward copy
+	movl %esi, %eax
+	addl %ecx, %eax        // eax = source + length
+	cmpl %eax, %edi        // If destination is inside source range
+	jb   2f                // => backward copy
+
+1:  // Forward copy
 
 	movl %ecx, %eax
 
 	// Copy dwords
-	
 	shrl $2, %ecx
 	rep movsl
 
 	// Copy remaining bytes
-
 	movl %eax, %ecx
 	andl $3, %ecx
 	rep movsb
 
 	jmp 3f
-	
 
-2:	// Backward copy
+
+2:  // Backward copy
 
 	// Set pointers to the end of the block
-	
-	addl %ecx, %edi
 	addl %ecx, %esi
+	addl %ecx, %edi
 
-	std			// Set direction flag (backward)
+	std                    // Set direction flag (backward)
 
 	// Copy dwords
-	
 	movl %ecx, %eax
 	shrl $2, %ecx
-	std
-
-	subl $4, %edi
 	subl $4, %esi
+	subl $4, %edi
 	rep movsl
 
-	mov %eax, %ecx
+	// Copy remaining bytes
+	movl %eax, %ecx
 	andl $3, %ecx
-	andl $3, %edi
-	andl $3, %esi
+	subl $1, %esi
+	subl $1, %edi
 	rep movsb
 
-	cld			// Clear direction flag
-	
+	cld                    // Clear direction flag
+
 3:
 	popl %ebp
 	ret
