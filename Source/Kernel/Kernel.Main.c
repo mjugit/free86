@@ -26,11 +26,26 @@
 	
 */
 
+#include "../Libs/Include/Heap.h"
+#include "../Libs/Include/Bitmap.h"
+
+extern U16 _Kernel_LowMemoryInfoKiB;
 
 
+static HeapArea* _Kernel_Heap;
 
-void KernelMain(void) {
 
+static void _InitializeHeap() {
+  void* heapStart = (void*)0xf000;
+  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
+  U16 blockSize = 8;
+
+  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
+}
+
+void KernelMain() {
+  _InitializeHeap();
+  
   while (1)
     __asm__ __volatile__("hlt");
 }

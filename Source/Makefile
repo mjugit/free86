@@ -23,6 +23,7 @@
 
 include Make.Tools.mk
 include Make.Bootloader.mk
+include Make.Libs.mk
 include Make.Kernel.mk
 
 

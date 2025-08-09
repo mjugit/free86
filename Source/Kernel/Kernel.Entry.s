@@ -49,6 +49,7 @@
 
 	// Memory size
 	.type _Kernel_GetLowMemorySize, @function
+	.global _Kernel_LowMemoryInfoKiB
 	.type _Kernel_LowMemoryInfoKiB, @object
 
 
