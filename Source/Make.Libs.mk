@@ -145,3 +145,38 @@ $(LIB_HEAP_BUILD_PATH)/%.o: $(LIB_HEAP_SOURCE_PATH)/%.c | $(LIB_HEAP_BUILD_PATH)
 
 $(LIB_HEAP_BUILD_PATH):
 	mkdir -p $(LIB_HEAP_BUILD_PATH)
+
+
+
+
+
+# Gfx library sources
+LIB_GFX_SOURCE_PATH = $(LIBS_BASE_PATH)/Gfx
+LIB_GFX_C_SOURCES = $(wildcard $(LIB_GFX_SOURCE_PATH)/*.c)
+LIB_GFX_HEADER = $(LIBS_INCLUDE_PATH)/Gfx.h
+
+# Gfx library output
+LIB_GFX_BUILD_PATH = $(LIBS_BUILD_PATH)/Gfx
+LIB_GFX_NAME = LibGfx.a
+LIB_GFX_FILE = $(LIBS_BUILD_PATH)/$(LIB_GFX_NAME)
+
+# Gfx library object files
+LIB_GFX_OBJECTS = $(LIB_GFX_C_SOURCES:$(LIB_GFX_SOURCE_PATH)/%.c=$(LIB_GFX_BUILD_PATH)/%.o)
+
+.PHONY: build-lib-gfx clean-lib-gfx
+
+build-lib-gfx: $(LIB_GFX_FILE) | $(LIBS_BUILD_PATH)
+
+clean-lib-gfx:
+	rm -vfr $(LIB_GFX_BUILD_PATH)
+	rm -vfr $(LIB_GFX_FILE)
+
+
+$(LIB_GFX_FILE): $(LIB_GFX_OBJECTS) $(LIB_GFX_HEADER) | $(LIBS_BUILD_PATH)
+	$(AR) rcs $(LIB_GFX_FILE) $(LIB_GFX_OBJECTS)
+
+$(LIB_GFX_BUILD_PATH)/%.o: $(LIB_GFX_SOURCE_PATH)/%.c | $(LIB_GFX_BUILD_PATH)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(LIB_GFX_BUILD_PATH):
+	mkdir -p $(LIB_GFX_BUILD_PATH)

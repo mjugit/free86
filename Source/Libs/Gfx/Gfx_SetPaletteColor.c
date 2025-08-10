@@ -26,32 +26,22 @@
 	
 */
 
-#include "../Libs/Include/Heap.h"
-#include "../Libs/Include/Bitmap.h"
-#include "../Libs/Include/Gfx.h"
 
-extern U16 _Kernel_LowMemoryInfoKiB;
+#include "../Include/Gfx.h"
 
 
-static HeapArea* _Kernel_Heap;
+__attribute__((unused))
+void Gfx_SetPaletteColor(U8 paletteIndex, Rgb64 color) {
+  // Limit values to 0–63
+  U8	valueRed   = (color.Red   > 63) ? 63 : color.Red;
+  U8	valueGreen = (color.Green > 63) ? 63 : color.Green;
+  U8	valueBlue  = (color.Blue  > 63) ? 63 : color.Blue;
 
+  // Select palette entry
+  PortWriteByte(Gfx.Port.DacIndex, paletteIndex);
 
-static void _InitializeHeap() {
-  void* heapStart = (void*)0xf000;
-  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
-  U16 blockSize = 8;
-
-  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
+  // Write R, G, B components
+  PortWriteByte(Gfx.Port.DacData, valueRed);
+  PortWriteByte(Gfx.Port.DacData, valueGreen);
+  PortWriteByte(Gfx.Port.DacData, valueBlue);
 }
-
-void KernelMain() {
-  _InitializeHeap();
-
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
-    Gfx.Core.RefreshFromBackBuffer();
-    
- 
-  while (1)
-    __asm__ __volatile__("hlt");
-}
-

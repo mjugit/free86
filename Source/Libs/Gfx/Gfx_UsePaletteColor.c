@@ -26,32 +26,18 @@
 	
 */
 
-#include "../Libs/Include/Heap.h"
-#include "../Libs/Include/Bitmap.h"
-#include "../Libs/Include/Gfx.h"
 
-extern U16 _Kernel_LowMemoryInfoKiB;
+#include "../Include/Gfx.h"
 
 
-static HeapArea* _Kernel_Heap;
+__attribute__((unused))
+void Gfx_UsePaletteColor(U8 colorIndex, U8 paletteIndex) {
+  // Sync VGA controller (switch to index mode)
+  PortReadByte(Gfx.Port.VgaStatus);
 
+  // Select attribute register (colorIndex & 0x1F)
+  PortWriteByte(Gfx.Port.AttributeIndex, colorIndex & 0x1f);
 
-static void _InitializeHeap() {
-  void* heapStart = (void*)0xf000;
-  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
-  U16 blockSize = 8;
-
-  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
+  // Write palette index (0–255 possible, but only lower bits used)
+  PortWriteByte(Gfx.Port.AttributeIndex, paletteIndex & 0xff);
 }
-
-void KernelMain() {
-  _InitializeHeap();
-
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
-    Gfx.Core.RefreshFromBackBuffer();
-    
- 
-  while (1)
-    __asm__ __volatile__("hlt");
-}
-

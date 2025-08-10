@@ -29,7 +29,7 @@
 
 	.code16
 
-	.section Kernel_EarlyBoot
+	.section .Kernel_EarlyBoot
 
 
 	// Kernel entry point
@@ -70,9 +70,10 @@ Kernel_EntryPoint:
 
 	cli
 
+	
 	call _Kernel_EnableHighAddressSupport
-	call _Kernel_EnablePlanarGraphicsMode
 	call _Kernel_GetLowMemorySize
+	call _Kernel_EnablePlanarGraphicsMode
 
 	// Switch to Protected Mode
 
@@ -149,7 +150,7 @@ _Kernel_EnableA20Gate:
 	
 _Kernel_EnablePlanarGraphicsMode:
 
-	movb $0x0, %ah
+	movb $0x00, %ah
 	movb $0x12, %al
 
 	int $0x10
@@ -169,7 +170,6 @@ _Kernel_GetLowMemorySize:
 
 	int $0x12
 	movw %ax, _Kernel_LowMemoryInfoKiB
-
 	jz _Kernel_Hang
 
 	ret

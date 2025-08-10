@@ -26,32 +26,14 @@
 	
 */
 
-#include "../Libs/Include/Heap.h"
-#include "../Libs/Include/Bitmap.h"
-#include "../Libs/Include/Gfx.h"
 
-extern U16 _Kernel_LowMemoryInfoKiB;
+#include "../Include/Gfx.h"
 
 
-static HeapArea* _Kernel_Heap;
+__attribute__((unused))
+void Gfx_SetBitMask(U8 bitMask) {
+  const U8 bitMaskIndex = 0x08;
 
-
-static void _InitializeHeap() {
-  void* heapStart = (void*)0xf000;
-  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
-  U16 blockSize = 8;
-
-  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
+  PortWriteByte(Gfx.Port.GraphicsIndex, bitMaskIndex);
+  PortWriteByte(Gfx.Port.GraphicsData, bitMask);
 }
-
-void KernelMain() {
-  _InitializeHeap();
-
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
-    Gfx.Core.RefreshFromBackBuffer();
-    
- 
-  while (1)
-    __asm__ __volatile__("hlt");
-}
-
