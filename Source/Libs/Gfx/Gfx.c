@@ -47,6 +47,15 @@ void	Gfx_EnableVideoOutput(void);
 void	Gfx_WaitForVSync(void);
 
 
+// Draw functions
+void Gfx_SetPixel(U16 posX, U16 posY, U8 colorIndex);
+void Gfx_DrawRect(U16 posX, U16 posY, U16 width, U16 height, U8 colorIndex);
+void Gfx_DrawFilledRect(U16 posX, U16 posY, U16 width, U16 height, U8 colorIndex);
+void Gfx_DrawLine(U16 startX, U16 startY, U16 endX, U16 endY, U8 colorIndex);
+void Gfx_DrawChar(U16 x, U16 y, char character, U8 color);
+void Gfx_DrawString(U16 x, U16 y, const char *string, U8 color);
+
+
 // Helpers
 Rgb64 Gfx_Color(U8 red, U8 green, U8 blue);
 
@@ -84,6 +93,16 @@ const struct __Gfx_Namespace Gfx = {
     .DisableVideoOutput = Gfx_DisableVideoOutput,
     .EnableVideoOutput = Gfx_EnableVideoOutput,
     .WaitForVSync = Gfx_WaitForVSync
+  },
+
+  // Draw functions
+  .Draw = {
+    .Pixel = Gfx_SetPixel,
+    .Rect = Gfx_DrawRect,
+    .FilledRect = Gfx_DrawFilledRect,
+    .Line = Gfx_DrawLine,
+    .Char = Gfx_DrawChar,
+    .String = Gfx_DrawString
   },
 
   // Helpers

@@ -34,13 +34,14 @@
 #include "Memory.h"
 #include "HardwareIO.h"
 
-typedef struct __Gfx_Rgb64 Rgb64;
-
-struct __Gfx_Rgb64 {
+typedef struct __Gfx_Rgb64 {
   U8 Red;
   U8 Green;
   U8 Blue;
-};
+} Rgb64;
+
+
+typedef U8 Char8x8[8];
 
 
 // Graphics port numbers
@@ -76,9 +77,19 @@ struct __Gfx_Core_Namespaces {
 };
 
 
+struct __Gfx_Draw_Namespace {
+  void (*Pixel)(U16 posX, U16 posY, U8 colorIndex);
+  void (*Rect)(U16 posX, U16 posY, U16 width, U16 height, U8 colorIndex);
+  void (*FilledRect)(U16 posX, U16 posY, U16 width, U16 height, U8 colorIndex);
+  void (*Line)(U16 startX, U16 startY, U16 endX, U16 endY, U8 colorIndex);
+  void (*Char)(U16 x, U16 y, char character, U8 color);
+  void (*String)(U16 x, U16 y, const char *string, U8 color);
+};
+
 struct __Gfx_Namespace {
   struct __Gfx_Port_Namespace Port;
   struct __Gfx_Core_Namespaces Core;
+  struct __Gfx_Draw_Namespace Draw;
 
   Rgb64 (*Color)(U8 red, U8 green, U8 blue);
 };

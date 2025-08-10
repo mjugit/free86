@@ -35,9 +35,11 @@ void Gfx_UsePaletteColor(U8 colorIndex, U8 paletteIndex) {
   // Sync VGA controller (switch to index mode)
   PortReadByte(Gfx.Port.VgaStatus);
 
-  // Select attribute register (colorIndex & 0x1F)
+  // Redefine color mapping
   PortWriteByte(Gfx.Port.AttributeIndex, colorIndex & 0x1f);
-
-  // Write palette index (0–255 possible, but only lower bits used)
   PortWriteByte(Gfx.Port.AttributeIndex, paletteIndex & 0xff);
+
+  // Enable video output by setting the video enable bit
+  PortReadByte(Gfx.Port.VgaStatus);
+  PortWriteByte(Gfx.Port.AttributeIndex, 0x20);
 }
