@@ -21,42 +21,21 @@
 # SOFTWARE.
 #
 
-include Make.Tools.mk
-include Make.Bootloader.mk
-include Make.Libs.mk
-include Make.Kernel.mk
+
+# Executable names
+LIBMEMORY_TESTBIN = RunLibMemoryTests
 
 
-FLOPPY_BUILD_PATH = Build
+CC = gcc
+CFLAGS = -m32 -O0
+SRC = $(wildcard *.c)
+BIN = $(basename $(SRC))
+LIBS = $(wildcard ../Source/Libs/Build/*.a)
 
-FLOPPY_IMAGE_FILE = $(FLOPPY_BUILD_PATH)/Kickstart.img
+all: $(BIN)
 
+%: %.c
+	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
 
-.PHONY: build-floppy clean-floppy
-
-
-build-floppy: clean-floppy $(FLOPPY_IMAGE_FILE)
-
-
-clean-floppy:
-	rm -f $(FLOPPY_IMAGE_FILE)
-
-
-$(FLOPPY_IMAGE_FILE): $(KERNEL_BINARY_FILE) $(BOOTLOADER_BINARY_FILE) | $(FLOPPY_BUILD_PATH)
-	dd if=/dev/zero of=$(FLOPPY_IMAGE_FILE) bs=512 count=2880 conv=notrunc
-	dd if=$(BOOTLOADER_BINARY_FILE) of=$(FLOPPY_IMAGE_FILE) bs=512 count=1 seek=0 conv=notrunc
-	dd if=$(KERNEL_BINARY_FILE) of=$(FLOPPY_IMAGE_FILE) bs=512 count=15 seek=1 conv=notrunc
-
-$(FLOPPY_BUILD_PATH):
-	mkdir -p $(FLOPPY_BUILD_PATH)
-
-
-build-all: build-bootloader build-kernel build-floppy
-
-clean-all: clean-floppy clean-kernel clean-bootloader
-
-
-run-qemu: $(FLOPPY_IMAGE_FILE)
-	qemu-system-i386 -drive if=floppy,file=$(FLOPPY_IMAGE_FILE),format=raw -m 5M -serial stdio -parallel none -rtc base=localtime -no-fd-bootchk
-
-
+clean:
+	rm -f $(BIN)

@@ -21,42 +21,41 @@
 # SOFTWARE.
 #
 
-include Make.Tools.mk
-include Make.Bootloader.mk
-include Make.Libs.mk
-include Make.Kernel.mk
 
 
-FLOPPY_BUILD_PATH = Build
+# Source code
+BOOTLOADER_SOURCE_FILE = Bootloader/Bootloader.s
+BOOTLOADER_LINKER_FILE = Bootloader/Bootloader.Linker.ld
 
-FLOPPY_IMAGE_FILE = $(FLOPPY_BUILD_PATH)/Kickstart.img
+# Build path
+BOOTLOADER_BUILD_PATH = Bootloader/Build
 
+# Path to object file
+BOOTLOADER_OBJECT_FILE = $(BOOTLOADER_BUILD_PATH)/Bootloader.o
 
-.PHONY: build-floppy clean-floppy
-
-
-build-floppy: clean-floppy $(FLOPPY_IMAGE_FILE)
-
-
-clean-floppy:
-	rm -f $(FLOPPY_IMAGE_FILE)
-
-
-$(FLOPPY_IMAGE_FILE): $(KERNEL_BINARY_FILE) $(BOOTLOADER_BINARY_FILE) | $(FLOPPY_BUILD_PATH)
-	dd if=/dev/zero of=$(FLOPPY_IMAGE_FILE) bs=512 count=2880 conv=notrunc
-	dd if=$(BOOTLOADER_BINARY_FILE) of=$(FLOPPY_IMAGE_FILE) bs=512 count=1 seek=0 conv=notrunc
-	dd if=$(KERNEL_BINARY_FILE) of=$(FLOPPY_IMAGE_FILE) bs=512 count=15 seek=1 conv=notrunc
-
-$(FLOPPY_BUILD_PATH):
-	mkdir -p $(FLOPPY_BUILD_PATH)
+# Path to binary
+BOOTLOADER_BINARY_FILE = $(BOOTLOADER_BUILD_PATH)/Bootloader.bin
 
 
-build-all: build-bootloader build-kernel build-floppy
-
-clean-all: clean-floppy clean-kernel clean-bootloader
+.PHONY: build-bootloader clean-bootloader
 
 
-run-qemu: $(FLOPPY_IMAGE_FILE)
-	qemu-system-i386 -drive if=floppy,file=$(FLOPPY_IMAGE_FILE),format=raw -m 5M -serial stdio -parallel none -rtc base=localtime -no-fd-bootchk
+# (Re)build the bootloader
+build-bootloader: clean-bootloader $(BOOTLOADER_BINARY_FILE)
 
+
+# Build the bootloader binary
+$(BOOTLOADER_BINARY_FILE): $(BOOTLOADER_SOURCE_FILE) $(BOOTLOADER_LINKER_FILE) | $(BOOTLOADER_BUILD_PATH)
+	$(AS) -o $(BOOTLOADER_OBJECT_FILE) -c $(BOOTLOADER_SOURCE_FILE)
+	$(LD) -o $(BOOTLOADER_BINARY_FILE) --oformat binary -T $(BOOTLOADER_LINKER_FILE) $(BOOTLOADER_OBJECT_FILE)
+
+
+# Create the bootloader build directory
+$(BOOTLOADER_BUILD_PATH):
+	mkdir -p $(BOOTLOADER_BUILD_PATH)
+
+
+# Remove the bootloader build artifacts
+clean-bootloader:
+	rm -vfr $(BOOTLOADER_BUILD_PATH)
 
