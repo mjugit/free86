@@ -93,17 +93,13 @@ _Memory_Set:
 
 	// Load params
 	movl  8(%ebp), %edi    // Destination
-	movb 12(%ebp), %al     // Value (low byte of eax)
+	movzbl 12(%ebp), %eax     // Value (low byte of eax)
 	movl 16(%ebp), %ecx    // Byte count
 
 	cld
 
 	// Construct a dword pattern in eax
-	movl %eax, %edx
-	shll $8, %edx
-	orl  %eax, %edx
-	shll $16, %edx
-	orl  %eax, %edx
+	imull  $0x01010101, %eax  // replicate byte to all four bytes
 
 	// Save original count
 	movl %ecx, %ebx

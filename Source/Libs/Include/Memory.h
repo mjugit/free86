@@ -29,6 +29,7 @@
 #ifndef _MEMORY_H_
 #define _MEMORY_H_
 
+#include "CoreTypes.h"
 
 /*
   Represents a the namespace for low level memory operations. The
@@ -39,19 +40,19 @@
 struct __Memory_Namespace {
   
   // Copy a block of memory without overlap protection
-  void (*Copy)(void *destination, const void *source, unsigned int count);
+  void (*Copy)(void *destination, const void *source, U32 count);
 
   // Flood a block of memory with a certain value
-  void (*Set)(void *destination, unsigned char value, unsigned int count);
+  void (*Set)(void *destination, U8 value, U32 count);
 
   // Copy a block of memory with overlap protection
-  void (*Move)(void *source, const void *destination, unsigned int count);
+  void (*Move)(void *source, const void *destination, U32 count);
 
   // Compare two blocks of memory
-  int (*Compare)(const void *a, const void *b, unsigned int count);
+  int (*Compare)(const void *a, const void *b, U32 count);
 
   // Find the first occurrence of a value in a block of memory
-  void* (*Find)(const void *block, unsigned char value, unsigned int count);
+  void* (*Find)(const void *block, U8 value, U32 count);
   
 };
 
