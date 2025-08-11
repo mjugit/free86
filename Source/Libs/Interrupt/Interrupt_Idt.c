@@ -26,38 +26,39 @@
 	
 */
 
-#include "../Libs/Include/Heap.h"
-#include "../Libs/Include/Bitmap.h"
-#include "../Libs/Include/Gfx.h"
 
-extern U16 _Kernel_LowMemoryInfoKiB;
+#include "../Include/Interrupt.h"
 
 
-static HeapArea* _Kernel_Heap;
+#define TOTAL_IDT_ENTRIES 256
+
+static IdtEntry DescriptorTable[TOTAL_IDT_ENTRIES];
+static IdtDescriptor DescriptorInstance;
 
 
-static void _InitializeHeap() {
-  void* heapStart = (void*)0xf000;
-  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
-  U16 blockSize = 8;
-
-  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
+// Loads the IDT into the CPU using lidt
+void Interrupt_LoadDescriptorTable() {
+  DescriptorInstance.Limit = sizeof(DescriptorTable) - 1;
+  // Strange cast, I know - just to mask a compiler warning
+  DescriptorInstance.Base = (U32)(unsigned long)&DescriptorTable;
+  
+  __asm__ volatile ("lidt (%0)" : : "r"(&DescriptorInstance));
 }
 
-void KernelMain() {
-  _InitializeHeap();
-
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
-    Gfx.Core.RefreshFromBackBuffer();
-
-  Gfx.Draw.FilledRect(10, 10, 620, 460, 1);
-  Gfx.Draw.String(15, 15, "Hello, world!", 15);
-  Gfx.Core.RefreshFromBackBuffer();
-  Gfx.Draw.String(15, 25, "Hello, world!", 15);
-  Gfx.Core.RefreshFromBackBuffer();
-    
- 
-  while (1)
-    __asm__ __volatile__("hlt");
+// Sets a gate in the IDT
+void Interrupt_SetGate(U8 vector, U32 base, U16 selector, U8 flags) {
+  DescriptorTable[vector].BaseLow = (U16)(base & 0xFFFF);
+  DescriptorTable[vector].SegmentSelector = selector;
+  DescriptorTable[vector].__ZeroReserved = 0;
+  DescriptorTable[vector].Flags = flags;
+  DescriptorTable[vector].BaseHigh = (U16)((base >> 16) & 0xFFFF);
 }
 
+// Clears a gate in the IDT
+void Interrupt_ClearGate(U8 vector) {
+  DescriptorTable[vector].BaseLow = 0;
+  DescriptorTable[vector].SegmentSelector = 0;
+  DescriptorTable[vector].__ZeroReserved = 0;
+  DescriptorTable[vector].Flags = 0;
+  DescriptorTable[vector].BaseHigh = 0;
+}

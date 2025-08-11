@@ -37,7 +37,7 @@ jobs:
 
       - name: Build Floppy Image
         working-directory: Source
-        run: make floppy
+        run: make build-floppy
 
       - name: Upload Floppy Image
         uses: actions/upload-artifact@v4

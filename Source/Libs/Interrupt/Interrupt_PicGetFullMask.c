@@ -26,38 +26,15 @@
 	
 */
 
-#include "../Libs/Include/Heap.h"
-#include "../Libs/Include/Bitmap.h"
-#include "../Libs/Include/Gfx.h"
 
-extern U16 _Kernel_LowMemoryInfoKiB;
+#include "../Include/Interrupt.h"
 
 
-static HeapArea* _Kernel_Heap;
+// Reads and returns the full 16-bit IRQ mask
+U16 Interrupt_GetFullMask(void) {
+  U8 master = PortReadByte(Interrupt.Pic.MasterDataPort);
+  U8 slave  = PortReadByte(Interrupt.Pic.SlaveDataPort);
 
-
-static void _InitializeHeap() {
-  void* heapStart = (void*)0xf000;
-  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
-  U16 blockSize = 8;
-
-  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
-}
-
-void KernelMain() {
-  _InitializeHeap();
-
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
-    Gfx.Core.RefreshFromBackBuffer();
-
-  Gfx.Draw.FilledRect(10, 10, 620, 460, 1);
-  Gfx.Draw.String(15, 15, "Hello, world!", 15);
-  Gfx.Core.RefreshFromBackBuffer();
-  Gfx.Draw.String(15, 25, "Hello, world!", 15);
-  Gfx.Core.RefreshFromBackBuffer();
-    
- 
-  while (1)
-    __asm__ __volatile__("hlt");
+  return (U16)((((U16)slave) << 8) | master);
 }
 

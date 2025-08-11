@@ -26,38 +26,23 @@
 	
 */
 
-#include "../Libs/Include/Heap.h"
-#include "../Libs/Include/Bitmap.h"
-#include "../Libs/Include/Gfx.h"
 
-extern U16 _Kernel_LowMemoryInfoKiB;
+#include "../Include/Interrupt.h"
 
 
-static HeapArea* _Kernel_Heap;
+// Unmasks a single IRQ line [0..15]
+void Interrupt_PicUnmaskRequest(U8 irq) {
+  if (irq < 8) {
+        U8 mask = PortReadByte(Interrupt.Pic.MasterDataPort);
+        mask &= (U8)~(1u << irq);
+        PortWriteByte(Interrupt.Pic.MasterDataPort, mask);
+    } else if (irq < 16) {
+        U8 line = (U8)(irq - 8);
+        U8 mask = PortReadByte(Interrupt.Pic.SlaveDataPort);
+        mask &= (U8)~(1u << line);
+        PortWriteByte(Interrupt.Pic.SlaveDataPort, mask);
+    }
 
-
-static void _InitializeHeap() {
-  void* heapStart = (void*)0xf000;
-  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
-  U16 blockSize = 8;
-
-  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
-}
-
-void KernelMain() {
-  _InitializeHeap();
-
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
-    Gfx.Core.RefreshFromBackBuffer();
-
-  Gfx.Draw.FilledRect(10, 10, 620, 460, 1);
-  Gfx.Draw.String(15, 15, "Hello, world!", 15);
-  Gfx.Core.RefreshFromBackBuffer();
-  Gfx.Draw.String(15, 25, "Hello, world!", 15);
-  Gfx.Core.RefreshFromBackBuffer();
-    
- 
-  while (1)
-    __asm__ __volatile__("hlt");
+  // Ignore if out of range
 }
 

@@ -26,38 +26,38 @@
 	
 */
 
-#include "../Libs/Include/Heap.h"
-#include "../Libs/Include/Bitmap.h"
-#include "../Libs/Include/Gfx.h"
 
-extern U16 _Kernel_LowMemoryInfoKiB;
+#include "../Include/Interrupt.h"
 
 
-static HeapArea* _Kernel_Heap;
+#define TOTAL_IRQ_LINES 16
 
 
-static void _InitializeHeap() {
-  void* heapStart = (void*)0xf000;
-  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
-  U16 blockSize = 8;
+static void (*IrqHandlers[TOTAL_IRQ_LINES])(struct InterruptFrame* frame) = { 0 };
 
-  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
+
+// Registers a handler for the given IRQ
+void Interrupt_IrqRegister(U8 irq, void (*handler)(struct InterruptFrame *frame)) {
+  if (irq >= TOTAL_IRQ_LINES)
+    return;
+	
+  IrqHandlers[irq] = handler;
 }
 
-void KernelMain() {
-  _InitializeHeap();
 
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
-    Gfx.Core.RefreshFromBackBuffer();
-
-  Gfx.Draw.FilledRect(10, 10, 620, 460, 1);
-  Gfx.Draw.String(15, 15, "Hello, world!", 15);
-  Gfx.Core.RefreshFromBackBuffer();
-  Gfx.Draw.String(15, 25, "Hello, world!", 15);
-  Gfx.Core.RefreshFromBackBuffer();
+// Unregisters the handler for the given IRQ
+void Interrupt_IrqUnregister(U8 irq) {
+  if (irq >= TOTAL_IRQ_LINES)
+    return;
     
- 
-  while (1)
-    __asm__ __volatile__("hlt");
+  IrqHandlers[irq] = 0;
 }
 
+
+void Interrupt_IrqDispatch(struct InterruptFrame* frame) {
+  U8 irq = (U8)(frame->InterruptNumber - 0x20); // Assuming PIC master offset = 0x20
+  if (irq < 16 && IrqHandlers[irq])
+    IrqHandlers[irq](frame);
+    
+  Interrupt.Pic.SendEndOfInterrupt(irq);
+}
