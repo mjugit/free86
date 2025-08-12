@@ -62,6 +62,10 @@ _Memory_Copy:
 	movl 8(%ebp), %edi	// Destination
 	movl 12(%ebp), %esi	// Source
 
+	// Ensure ES=DS to prevent copy errors
+	push %ds
+	pop  %es
+
 	// Copy whole dwords
 	
 	cld			// Clear direction flag (forward)
