@@ -26,36 +26,22 @@
 	
 */
 
-#include "../Libs/Include/Heap.h"
-#include "../Libs/Include/Bitmap.h"
-#include "../Libs/Include/Gfx.h"
-
-extern U16 _Kernel_LowMemoryInfoKiB;
+#include "../Include/Gfx.h"
 
 
-static HeapArea* _Kernel_Heap;
+__attribute__((unused))
+void Gfx_DrawString(U16 x, U16 y, const char *string, U8 color) {
+  if (!string)
+    return;
 
+  U16 screenWidth = Gfx.Core.GetScreenWidth();
+  for (const char *ptr = string; *ptr; ptr++) {
+    Gfx.Draw.Char(x, y, *ptr, color);
 
-static void _InitializeHeap() {
-  void* heapStart = (void*)0xf000;
-  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
-  U16 blockSize = 8;
-
-  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
+    x += 8;
+    if (x >= screenWidth) {
+      x = 0;
+      y += 8;
+    }
+  }
 }
-
-void KernelMain() {
-  _InitializeHeap();
-
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
-    Gfx.Core.RefreshFromBackBuffer();
-  
-  Gfx.Draw.FilledRect(5, 5, 630, 470, 3);
-  Gfx.Draw.String(10, 10, "Hello, World!", 15);
-  Gfx.Core.RefreshFromBackBuffer();
-    
- 
-  while (1)
-    __asm__ __volatile__("hlt");
-}
-
