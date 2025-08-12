@@ -49,6 +49,12 @@ void KernelMain() {
 
   if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
     Gfx.Core.RefreshFromBackBuffer();
+
+  Gfx.Draw.FilledRect(10, 10, 620, 460, 1);
+  Gfx.Draw.String(15, 15, "Hello, world!", 15);
+  Gfx.Core.RefreshFromBackBuffer();
+  Gfx.Draw.String(15, 25, "Hello, world!", 15);
+  Gfx.Core.RefreshFromBackBuffer();
     
  
   while (1)
