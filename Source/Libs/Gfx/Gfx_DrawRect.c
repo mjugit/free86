@@ -26,36 +26,29 @@
 	
 */
 
-#include "../Libs/Include/Heap.h"
-#include "../Libs/Include/Bitmap.h"
-#include "../Libs/Include/Gfx.h"
 
-extern U16 _Kernel_LowMemoryInfoKiB;
+#include "../Include/Gfx.h"
 
 
-static HeapArea* _Kernel_Heap;
-
-
-static void _InitializeHeap() {
-  void* heapStart = (void*)0xf000;
-  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
-  U16 blockSize = 8;
-
-  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
-}
-
-void KernelMain() {
-  _InitializeHeap();
-
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
-    Gfx.Core.RefreshFromBackBuffer();
-  
-  Gfx.Draw.FilledRect(5, 5, 630, 470, 3);
-  Gfx.Draw.String(10, 10, "Hello, World!", 15);
-  Gfx.Core.RefreshFromBackBuffer();
+// Draws a non-filled rectangle
+__attribute__((unused))
+void Gfx_DrawRect(U16 posX, U16 posY, U16 width, U16 height, U8 colorIndex) {
+  if (width == 0 || height == 0)
+    return;
     
- 
-  while (1)
-    __asm__ __volatile__("hlt");
+  // Top edge
+  for (U16 x = posX; x < posX + width; x++) 
+    Gfx.Draw.Pixel(x, posY, colorIndex);
+    
+  // Bottom edge
+  for (U16 x = posX; x < posX + width; x++) 
+    Gfx.Draw.Pixel(x, posY + height - 1, colorIndex);
+    
+  // Left edge
+  for (U16 y = posY; y < posY + height; y++) 
+    Gfx.Draw.Pixel(posX, y, colorIndex);
+    
+  // Right edge
+  for (U16 y = posY; y < posY + height; y++) 
+    Gfx.Draw.Pixel(posX + width - 1, y, colorIndex);
 }
-
