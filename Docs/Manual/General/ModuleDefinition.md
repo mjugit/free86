@@ -20,10 +20,10 @@ For example, a library might be declared as follows:
 ```c
 // MyLib.h
 
-module(MyLib, {
+module(MyLib) {
   void (*ExampleFunction1)(void* obj, unsigned count);
   int  (*ExampleFunction2)(const void* obj);
-});
+};
 ```
 
 This tells the compiler: “There will be a module called `MyLib` with these two functions.” Nothing is implemented yet, but the interface is fixed.
@@ -41,10 +41,10 @@ The actual function bodies are written in a `.c` file as usual. Once they exist,
 void MyLib_ImplFunction1(void* obj, U16 count) { /* ... */ }
 I32  MyLib_ImplFunction2(const void* obj) { /* ... */ }
 
-members(MyLib, {
+members(MyLib) {
   .ExampleFunction1 = MyLib_ImplFunction1,
   .ExampleFunction2 = MyLib_ImplFunction2
-});
+};
 ```
 
 This step “fills in” the namespace. After importing the module (as described below), you can now write:

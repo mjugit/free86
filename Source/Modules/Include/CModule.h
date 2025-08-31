@@ -46,13 +46,13 @@
 
 
 // Define the interface of a module.
-#define module(name, body)					\
+#define module(name)					\
   typedef struct __c_mod_typename(name) __c_mod_typename(name); \
-  struct __c_mod_typename(name) body				
+  struct __c_mod_typename(name)			
 
 // Define the implementation of a module instance.
-#define members(name, body)			\
-  const __c_mod_typename(name) name = body
+#define members(name)			\
+  const __c_mod_typename(name) name = (__c_mod_typename(name)) 
 
 // Import a module reference from another translation unit.
 #define use(name)				\
