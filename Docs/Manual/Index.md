@@ -4,3 +4,8 @@ This manual is intended to help other programmers who want to participate in the
 
 ## General stuff
 - [Project organization](./General/ProjectOrganization.md) A few important notes about code structuring, the use of statically linked libraries, and naming things.
+- [Module definition macros](./General/ModuleDefinition.md) A guide on how to define and use code modules (or namespaces). There are a few macros that help you to keep your code structured.
+
+
+## Code documentation
+- [SystemCore](./CodeDocs/SystemCore.md) The core module of the system, which provides the most important types and low-level operations.

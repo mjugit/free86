@@ -25,7 +25,8 @@ const struct MyLibNamespace MyLib = {
 };
 ```
 
-
+**Note:** To save you from having to write this repetitive boilerplate code, macros are available that make working with namespaces much more readable and user-friendly. Find out more on [this page](./ModuleDefinition.md).
+ 
 ## Static libraries vs. module compilation
 
 It is tempting to rely on statically linked libraries for coordination of the build process, especially if you come from application development. However, when writing an operating system, this approach often causes problems: some functions or variables may not be linked, and the resulting errors can be extremely hard to track down.
