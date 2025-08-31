@@ -8,4 +8,8 @@ This manual is intended to help other programmers who want to participate in the
 
 
 ## Code documentation
+
+### Essentials
 - [SystemCore](./CodeDocs/SystemCore.md) The core module of the system, which provides the most important types and low-level operations.
+- [Bitmap Module](./CodeDocs/BitmapModule.md) Provides functions for editing and evaluating bitmaps.
+
