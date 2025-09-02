@@ -29,10 +29,13 @@
 #ifndef _GFX_H_
 #define _GFX_H_
 
-#include "CoreTypes.h"
+#include "../../Modules/Include/SystemCore.h"
+#include "../../Modules/Include/Memory.h"
+#include "../../Kernel/Include/HardwareIO.h"
+
+use(Memory);
+
 #include "Heap.h"
-#include "Memory.h"
-#include "HardwareIO.h"
 
 typedef struct __Gfx_Rgb64 {
   U8 Red;

@@ -29,8 +29,10 @@
 #ifndef _HEAP_H_
 #define _HEAP_H_
 
-#include "CoreTypes.h"
-#include "Bitmap.h"
+#include "../../Modules/Include/SystemCore.h"
+#include "../../Modules/Include/Bitmap.h"
+
+use(Bitmap);
 
 
 typedef struct __Heap_HeapArea {
