@@ -194,6 +194,9 @@ _Kernel_ProtectedMode:
 	movw %ax, %gs
 	movw %ax, %ss
 
+	// Place stack somewhere in low memory
+	movl $0x80000, %esp
+
 	call KernelMain
 
 	// KernelMain usually never returns. If it does anyway, hang
