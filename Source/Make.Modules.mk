@@ -62,7 +62,44 @@ $(MOD_BITMAP_OUTPUT): $(MOD_BITMAP_OBJECTS)
 
 .PHONY: mod-bitmap clean-mod-bitmap
 
+
 mod-bitmap: $(MOD_BITMAP_OUTPUT)
 
 clean-mod-bitmap:
 	rm -fr $(MOD_BITMAP_BUILD_PATH)
+
+# MEMORY module
+MOD_MEMORY_SOURCE_PATH = $(MODULES_BASE_PATH)/Memory
+MOD_MEMORY_BUILD_PATH = $(MODULES_BUILD_PATH)/Memory
+MOD_MEMORY_OUTPUT = $(MOD_MEMORY_BUILD_PATH)/ModMemory.o
+
+MOD_MEMORY_ASM = $(wildcard $(MOD_MEMORY_SOURCE_PATH)/*.s)
+MOD_MEMORY_C = $(wildcard $(MOD_MEMORY_SOURCE_PATH)/*.c)
+MOD_MEMORY_SOURCE = $(MOD_MEMORY_ASM) $(MOD_MEMORY_C)
+
+MOD_MEMORY_OBJECTS = $(patsubst $(MOD_MEMORY_SOURCE_PATH)/%.c, \
+                                 $(MOD_MEMORY_BUILD_PATH)/%.o, \
+                                 $(MOD_MEMORY_C)) \
+                     $(patsubst $(MOD_MEMORY_SOURCE_PATH)/%.s, \
+                                 $(MOD_MEMORY_BUILD_PATH)/%.o, \
+                                 $(MOD_MEMORY_ASM))
+
+$(MOD_MEMORY_BUILD_PATH):
+	mkdir -p $(MOD_MEMORY_BUILD_PATH)
+
+$(MOD_MEMORY_BUILD_PATH)/%.o: $(MOD_MEMORY_SOURCE_PATH)/%.s | $(MOD_MEMORY_BUILD_PATH)
+	$(AS) -o $@ $<
+
+$(MOD_MEMORY_BUILD_PATH)/%.o: $(MOD_MEMORY_SOURCE_PATH)/%.c | $(MOD_MEMORY_BUILD_PATH)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(MOD_MEMORY_OUTPUT): $(MOD_MEMORY_OBJECTS)
+	$(LD) -r -o $@ $^
+
+
+.PHONY: mod-memory clean-mod-memory
+
+mod-memory: $(MOD_MEMORY_OUTPUT)
+
+clean-mod-memory:
+	rm -fr $(MOD_MEMORY_BUILD_PATH)

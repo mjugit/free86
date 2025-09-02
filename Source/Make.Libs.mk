@@ -39,39 +39,6 @@ clean-libs:
 
 
 
-# Memory library sources
-LIB_MEMORY_SOURCE_PATH = $(LIBS_BASE_PATH)/Memory
-LIB_MEMORY_SOURCES = $(wildcard $(LIB_MEMORY_SOURCE_PATH)/*.s)
-LIB_MEMORY_HEADER = $(LIBS_INCLUDE_PATH)/Memory.h
-
-# Memory library output
-LIB_MEMORY_BUILD_PATH = $(LIBS_BUILD_PATH)/Memory
-LIB_MEMORY_NAME = LibMemory.a
-LIB_MEMORY_FILE = $(LIBS_BUILD_PATH)/$(LIB_MEMORY_NAME)
-
-# Memory library object files
-LIB_MEMORY_OBJECTS = $(LIB_MEMORY_SOURCES:$(LIB_MEMORY_SOURCE_PATH)/%.s=$(LIB_MEMORY_BUILD_PATH)/%.o)
-
-.PHONY: build-lib-memory clean-lib-memory
-
-build-lib-memory: $(LIB_MEMORY_FILE) | $(LIBS_BUILD_PATH)
-
-clean-lib-memory:
-	rm -vfr $(LIB_MEMORY_BUILD_PATH)
-	rm -vfr $(LIB_MEMORY_FILE)
-
-
-$(LIB_MEMORY_FILE): $(LIB_MEMORY_OBJECTS) $(LIB_MEMORY_HEADER) | $(LIBS_BUILD_PATH)
-	$(AR) rcs $(LIB_MEMORY_FILE) $(LIB_MEMORY_OBJECTS)
-
-$(LIB_MEMORY_BUILD_PATH)/%.o: $(LIB_MEMORY_SOURCE_PATH)/%.s | $(LIB_MEMORY_BUILD_PATH)
-	$(AS) -o $@ $<
-
-$(LIB_MEMORY_BUILD_PATH):
-	mkdir -p $(LIB_MEMORY_BUILD_PATH)
-
-
-
 
 
 
