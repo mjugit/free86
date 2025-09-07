@@ -68,6 +68,8 @@ mod-bitmap: $(MOD_BITMAP_OUTPUT)
 clean-mod-bitmap:
 	rm -fr $(MOD_BITMAP_BUILD_PATH)
 
+
+
 # MEMORY module
 MOD_MEMORY_SOURCE_PATH = $(MODULES_BASE_PATH)/Memory
 MOD_MEMORY_BUILD_PATH = $(MODULES_BUILD_PATH)/Memory
@@ -103,3 +105,41 @@ mod-memory: $(MOD_MEMORY_OUTPUT)
 
 clean-mod-memory:
 	rm -fr $(MOD_MEMORY_BUILD_PATH)
+
+
+
+# HEAP module
+MOD_HEAP_SOURCE_PATH = $(MODULES_BASE_PATH)/Heap
+MOD_HEAP_BUILD_PATH = $(MODULES_BUILD_PATH)/Heap
+MOD_HEAP_OUTPUT = $(MOD_HEAP_BUILD_PATH)/ModHeap.o
+
+MOD_HEAP_ASM = $(wildcard $(MOD_HEAP_SOURCE_PATH)/*.s)
+MOD_HEAP_C = $(wildcard $(MOD_HEAP_SOURCE_PATH)/*.c)
+MOD_HEAP_SOURCE = $(MOD_HEAP_ASM) $(MOD_HEAP_C)
+
+MOD_HEAP_OBJECTS = $(patsubst $(MOD_HEAP_SOURCE_PATH)/%.c, \
+                                 $(MOD_HEAP_BUILD_PATH)/%.o, \
+                                 $(MOD_HEAP_C)) \
+                     $(patsubst $(MOD_HEAP_SOURCE_PATH)/%.s, \
+                                 $(MOD_HEAP_BUILD_PATH)/%.o, \
+                                 $(MOD_HEAP_ASM))
+
+$(MOD_HEAP_BUILD_PATH):
+	mkdir -p $(MOD_HEAP_BUILD_PATH)
+
+$(MOD_HEAP_BUILD_PATH)/%.o: $(MOD_HEAP_SOURCE_PATH)/%.s | $(MOD_HEAP_BUILD_PATH)
+	$(AS) -o $@ $<
+
+$(MOD_HEAP_BUILD_PATH)/%.o: $(MOD_HEAP_SOURCE_PATH)/%.c | $(MOD_HEAP_BUILD_PATH)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(MOD_HEAP_OUTPUT): $(MOD_HEAP_OBJECTS)
+	$(LD) -r -o $@ $^
+
+
+.PHONY: mod-heap clean-mod-heap
+
+mod-heap: $(MOD_HEAP_OUTPUT)
+
+clean-mod-heap:
+	rm -fr $(MOD_HEAP_BUILD_PATH)
