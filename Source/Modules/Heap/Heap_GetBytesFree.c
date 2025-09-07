@@ -30,7 +30,7 @@
 #include "../Include/Heap.h"
 
 
-U32 _Heap_GetBytesFreeImplementation(HeapMemory *heapArea) {
+U32 _Heap_GetBytesFreeImplementation(HeapMemory heapArea) {
   __HeapMemory_Header* header = (__HeapMemory_Header*)heapArea;
 
   return header->TotalBytesFree;

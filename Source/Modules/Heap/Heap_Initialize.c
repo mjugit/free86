@@ -30,7 +30,7 @@
 #include "../Include/Heap.h"
 
 
-HeapMemory* _Heap_InitializeImplementation(void *pointer, U32 totalSize) {
+HeapMemory _Heap_InitializeImplementation(void *pointer, U32 totalSize) {
   __HeapMemory_Header* header = pointer;
 
   // Create header

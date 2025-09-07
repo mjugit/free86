@@ -30,7 +30,7 @@
 #include "../Include/Heap.h"
 
 
-void _Heap_FreeImplementation(HeapMemory *heapArea, void* pointer) {
+void _Heap_FreeImplementation(HeapMemory heapArea, void* pointer) {
   __HeapMemory_Header* header = (__HeapMemory_Header*)heapArea;
 
   if (pointer < (void*)heapArea ||

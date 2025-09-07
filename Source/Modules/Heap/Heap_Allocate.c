@@ -30,7 +30,7 @@
 #include "../Include/Heap.h"
 
 
-void* _Heap_AllocateImplementation(HeapMemory *heapArea, U32 size) {
+void* _Heap_AllocateImplementation(HeapMemory heapArea, U32 size) {
   __HeapMemory_Header* header = (__HeapMemory_Header*)heapArea;
 
   // Fast check

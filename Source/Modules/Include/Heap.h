@@ -183,22 +183,22 @@ static inline __HeapMemory_Slice* __Heap_FindNextSlice(__HeapMemory_Slice* slice
 module(Heap) {
 
   // Initializes a new dynamic memory area
-  HeapMemory* (*Initialize) (void *pointer, U32 totalSize);
+  HeapMemory (*Initialize) (void *pointer, U32 totalSize);
 
   // Allocates a continuous block of memory; returns a pointer or null in case of an error
-  void* (*Allocate) (HeapMemory *heapArea, U32 size);
+  void* (*Allocate) (HeapMemory heapArea, U32 size);
 
   // Free a previously allocated dynamic memory area
-  void (*Free)(HeapMemory *heapArea, void* pointer);
+  void (*Free)(HeapMemory heapArea, void* pointer);
 
   // Merge adjacent free blocks of memory
-  void (*Defrag)(HeapMemory *heapArea);
+  void (*Defrag)(HeapMemory heapArea);
   
   // Get the amount of free bytes in this area
-  U32 (*GetBytesFree)(HeapMemory *heapArea);
+  U32 (*GetBytesFree)(HeapMemory heapArea);
 
   // Get the amount of allocated bytes in this area
-  U32 (*GetBytesUsed)(HeapMemory *heapArea);
+  U32 (*GetBytesUsed)(HeapMemory heapArea);
   
 };
 

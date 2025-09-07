@@ -201,11 +201,9 @@ MU_TEST(Heap_Defrag__Always__DefragsMemory) {
   Heap.Free(heap, first);
   Heap.Free(heap, second);
   Heap.Free(heap, third);
-  printf("Before defrag: %u bytes \n", totalBytesFreeBeforeAlloc);
   
   // Method to test
   Heap.Defrag(heap);
-  printf("After defrag: %u bytes \n", Heap.GetBytesFree(heap));
   
   // Check result
   mu_check(Heap.GetBytesFree(heap) == totalBytesFreeBeforeAlloc);

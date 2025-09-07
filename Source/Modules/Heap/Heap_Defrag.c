@@ -30,7 +30,7 @@
 #include "../Include/Heap.h"
 
 
-void _Heap_DefragImplementation(HeapMemory *heapArea) {
+void _Heap_DefragImplementation(HeapMemory heapArea) {
   __HeapMemory_Header* header = (__HeapMemory_Header*)heapArea;
 
   if (!header->FreeBlockList)
