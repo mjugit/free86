@@ -26,36 +26,170 @@
 	
 */
 
-#include "../Libs/Include/Heap.h"
-#include "../Libs/Include/Bitmap.h"
+#include "../Modules/Include/Heap.h"
+#include "../Modules/Include/Bitmap.h"
+#include "../Modules/Include/String.h"
+
 #include "../Libs/Include/Gfx.h"
+
+#include "Include/Interrupt.h"
+
+use(Bitmap);
+use(Heap);
+use(String);
 
 extern U16 _Kernel_LowMemoryInfoKiB;
 
 
-static HeapArea* _Kernel_Heap;
+// Dynamic memory
+static HeapMemory _Kernel_DynMemory;
 
+static void _InitializeHeap(void) {
+  void* heapLimitBottom = (void*)0x10000;
+  void* heapLimitTop = (void*)0x60000;
 
-static void _InitializeHeap() {
-  void* heapStart = (void*)0xf000;
-  U32 heapSize = (_Kernel_LowMemoryInfoKiB  - 64) * 1024;
-  U16 blockSize = 8;
-
-  _Kernel_Heap = Heap.Initialize(heapStart, heapSize, blockSize);
+  U32 totalHeapSize = heapLimitTop - heapLimitBottom;
+  _Kernel_DynMemory = Heap.Initialize(heapLimitBottom, totalHeapSize);
 }
+
+
+// Interrupts
+static IdtEntry _Kernel_Idt[256];
+static IdtDescriptor _Kernel_IdtDescriptor;
+
+
+
+
+/* extern void IrqKeyboard_Stub(void); */
+
+static U16 pixelX = 0;
+static void KeyboardHandler(void) {
+  U8 scanCode = PortReadByte(0x60);
+  (void)scanCode;
+
+  pixelX++;
+}
+
+
+/* Naked attribute: no prolog/epilog */
+__attribute__((naked))
+void IrqKeyboard_Handler(void) {
+    __asm__ __volatile__(
+        "pusha\n"
+    );
+
+    KeyboardHandler();
+    
+    __asm__ __volatile__(
+        /* Send EOI to PIC */
+        "movb $0x20, %al\n"
+        "outb %al, $0x20\n"
+        "popa\n"
+        "iret\n"
+    );
+}
+
+
+U32 uptimeSeconds = 0;
+U16 timerCounter = 0;
+__attribute__((naked))
+void IrqTimer_Handler(void) {
+    __asm__ __volatile__(
+        "pusha\n"
+    );
+
+    timerCounter = timerCounter + 1;
+    if (timerCounter == 100) {
+      pixelX++;
+      uptimeSeconds++;
+      timerCounter = 0;
+    }
+    
+    __asm__ __volatile__(
+        /* Send EOI to PIC */
+        "movb $0x20, %al\n"
+        "outb %al, $0x20\n"
+        "popa\n"
+        "iret\n"
+    );
+}
+
+static void InitializeTimer() {
+    U16 divisor = 11932; /* ≈ 100 Hz */
+
+    PortWriteByte(0x43, 0x36);
+
+    PortWriteByte(0x40, (U8)(divisor & 0xFF));
+    PortWriteByte(0x40, (U8)(divisor >> 8));
+
+    U8 timerHandlerFlags = Idt_EncodeFlags(IdtGateTypeInt32, IdtPrivilegeKernel, true);
+    Idt_SetGate(&_Kernel_Idt[0x20], (U32)IrqTimer_Handler, 0x08,  timerHandlerFlags);
+}
+
+/* Minimal interrupt init */
+static void _InitializeInterrupts() {
+    DisableInterrupts();
+
+    /* Remap PIC */
+    PortWriteByte(0x20, 0x11);
+    PortWriteByte(0xA0, 0x11);
+    PortWriteByte(0x21, 0x20); /* Master offset = 32 */
+    PortWriteByte(0xA1, 0x28); /* Slave offset = 40 */
+    PortWriteByte(0x21, 0x04);
+    PortWriteByte(0xA1, 0x02);
+
+    PortWriteByte(0x21, 0x01);
+    PortWriteByte(0xA1, 0x01);
+
+    /* Mask everything except IRQ1 (keyboard) */
+    // PortWriteByte(0x21, 0xFD);
+    /* Mask everything except IRQ1 (keyboard) and IRQ0 (timer)*/
+    PortWriteByte(0x21, 0xfc);
+    PortWriteByte(0xA1, 0xFF);
+
+    InitializeTimer();
+    U8 keyboardHandlerFlags = Idt_EncodeFlags(IdtGateTypeInt32, IdtPrivilegeKernel, true);
+    Idt_SetGate(&_Kernel_Idt[0x21], (U32)IrqKeyboard_Handler, 0x08, keyboardHandlerFlags);
+    Idt_Load(_Kernel_Idt, &_Kernel_IdtDescriptor);
+
+    EnableInterrupts();
+}
+ 
 
 void KernelMain() {
   _InitializeHeap();
+  _InitializeInterrupts();
 
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_Heap))
+  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_DynMemory))
     Gfx.Core.RefreshFromBackBuffer();
   
-  Gfx.Draw.FilledRect(5, 5, 630, 470, 3);
-  Gfx.Draw.String(10, 10, "Hello, World!", 15);
+  Gfx.Draw.FilledRect(0, 0, 639, 14, 7);
+
+  
+  char textBuffer[100] = { };
   Gfx.Core.RefreshFromBackBuffer();
     
  
-  while (1)
+  while (1) {
+    Gfx.Draw.Pixel(pixelX, 479, 4);
+    Gfx.Draw.FilledRect(5, 19, 630, 451, 15);
+
+    
+    Gfx.Draw.FilledRect(0, 0, 639, 14, 7);
+    char timeText[100] = { };
+    String.Format(timeText, "Up %d secs\0", uptimeSeconds);
+
+    char memText[100] = { };
+    String.Format(memText,
+		  "%d free of %d bytes\0",
+		  Heap.GetBytesFree(_Kernel_DynMemory),
+		  Heap.GetBytesUsed(_Kernel_DynMemory) + Heap.GetBytesFree(_Kernel_DynMemory));
+    
+    Gfx.Draw.String(10, 3, timeText, 0);
+    Gfx.Draw.String(340, 3, memText, 0);
+    Gfx.Core.RefreshFromBackBuffer();
+    
     __asm__ __volatile__("hlt");
+  }
 }
 

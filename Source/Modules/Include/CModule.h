@@ -59,7 +59,7 @@
   extern const __c_mod_typename(name) name
 
 // Embed a module as a field within another module.
-#define embed(name)				\
-  const __c_mod_typename(name) name
+#define embed(name, namespace)				\
+  const __c_mod_typename(name) namespace
 
 #endif

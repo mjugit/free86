@@ -143,3 +143,41 @@ mod-heap: $(MOD_HEAP_OUTPUT)
 
 clean-mod-heap:
 	rm -fr $(MOD_HEAP_BUILD_PATH)
+
+
+
+# STRING module
+MOD_STRING_SOURCE_PATH = $(MODULES_BASE_PATH)/String
+MOD_STRING_BUILD_PATH = $(MODULES_BUILD_PATH)/String
+MOD_STRING_OUTPUT = $(MOD_STRING_BUILD_PATH)/ModString.o
+
+MOD_STRING_ASM = $(wildcard $(MOD_STRING_SOURCE_PATH)/*.s)
+MOD_STRING_C = $(wildcard $(MOD_STRING_SOURCE_PATH)/*.c)
+MOD_STRING_SOURCE = $(MOD_STRING_ASM) $(MOD_STRING_C)
+
+MOD_STRING_OBJECTS = $(patsubst $(MOD_STRING_SOURCE_PATH)/%.c, \
+                                 $(MOD_STRING_BUILD_PATH)/%.o, \
+                                 $(MOD_STRING_C)) \
+                     $(patsubst $(MOD_STRING_SOURCE_PATH)/%.s, \
+                                 $(MOD_STRING_BUILD_PATH)/%.o, \
+                                 $(MOD_STRING_ASM))
+
+$(MOD_STRING_BUILD_PATH):
+	mkdir -p $(MOD_STRING_BUILD_PATH)
+
+$(MOD_STRING_BUILD_PATH)/%.o: $(MOD_STRING_SOURCE_PATH)/%.s | $(MOD_STRING_BUILD_PATH)
+	$(AS) -o $@ $<
+
+$(MOD_STRING_BUILD_PATH)/%.o: $(MOD_STRING_SOURCE_PATH)/%.c | $(MOD_STRING_BUILD_PATH)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(MOD_STRING_OUTPUT): $(MOD_STRING_OBJECTS)
+	$(LD) -r -o $@ $^
+
+
+.PHONY: mod-string clean-mod-string
+
+mod-string: $(MOD_STRING_OUTPUT)
+
+clean-mod-string:
+	rm -fr $(MOD_STRING_BUILD_PATH)
