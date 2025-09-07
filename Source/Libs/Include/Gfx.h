@@ -31,11 +31,11 @@
 
 #include "../../Modules/Include/SystemCore.h"
 #include "../../Modules/Include/Memory.h"
+#include "../../Modules/Include/Heap.h"
 #include "../../Kernel/Include/HardwareIO.h"
 
 use(Memory);
-
-#include "Heap.h"
+use(Heap);
 
 typedef struct __Gfx_Rgb64 {
   U8 Red;
@@ -63,7 +63,7 @@ struct __Gfx_Port_Namespace {
 };
 
 struct __Gfx_Core_Namespaces {
-  void* (*Initialize)(U16 width, U16 height, U8 numPlanes, HeapArea* heap);
+  void* (*Initialize)(U16 width, U16 height, U8 numPlanes, HeapMemory heap);
   void* (*GetBackBuffer)(void);
   U32 (*GetBackBufferSize)(void);
   U16 (*GetScreenWidth)(void);
