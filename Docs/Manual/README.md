@@ -15,5 +15,6 @@ This manual is intended to help other programmers who want to participate in the
 
 ### Modules
 - [Bitmap Module](./CodeDocs/BitmapModule.md) Provides functions for editing and evaluating bitmaps.
+- [Heap module](./CodeDocs/HeapModule.md) Provides function for creating and managing dynamic memory areas.
 - [Memory Module](./CodeDocs/MemoryModule.md) Provides functions for low level memory manipulation and evaluation.
 
