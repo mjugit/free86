@@ -14,13 +14,11 @@ fi
 
 echo -e "\n\n==> START UNIT TESTS..."
 
-echo "[LibMemory]"
-./LibMemory.Tests
-
-echo "[LibBitmap]"
-./LibBitmap.Tests
-
-echo "[LibHeap]"
-./LibHeap.Tests
+for TESTPRG in $(ls *.Tests); do
+    if [ -x $TESTPRG ]; then
+	echo "[${TESTPRG}]"
+	./$TESTPRG
+    fi
+done
 
 echo -e "==> FINISH UNIT TESTS\n\n"

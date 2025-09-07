@@ -27,15 +27,15 @@ LIBMEMORY_TESTBIN = RunLibMemoryTests
 
 
 CC = gcc
-CFLAGS = -m32 -O0
+CFLAGS = -m32 -O0 -std=gnu99
 SRC = $(wildcard *.c)
 BIN = $(basename $(SRC))
-LIBS = $(wildcard ../Source/Libs/Build/*.a)
+MODS = $(wildcard ../Source/Modules/Build/*/Mod*.o)
 
 all: $(BIN)
 
 %: %.c
-	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(MODS)
 
 clean:
 	rm -f $(BIN)
