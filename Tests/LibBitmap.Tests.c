@@ -28,8 +28,9 @@
 
 #include "MinUnit.h"
 
-#include "../Source/Libs/Include/Bitmap.h"
+#include "../Source/Modules/Include/Bitmap.h"
 
+use(Bitmap);
 
 MU_TEST(Bitmap_Set__SingleBitUnset__SetsBit) {
   unsigned char bitmap[4] = {0x00, 0x00, 0x00, 0x00};
