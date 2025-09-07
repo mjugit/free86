@@ -27,47 +27,38 @@
 	*/
 
 
-	.section .GlobalDescriptorTable
-	.align 8
-
-	.global GdtDescriptor
-	.type GdtDescriptor, @object
+	.global _Memory_CopyImplementation
+	.type _Memory_CopyImplementation, @function
 
 	
+_Memory_CopyImplementation:
 
-GlobalDescriptorTable_Head:
+	pushl %ebp
+	movl %esp, %ebp
 
-	// Null segment
+	// Load params
 
-	.quad 0x0000000000000000
+	movl 16(%ebp), %ecx	// Byte count
+	movl 8(%ebp), %edi	// Destination
+	movl 12(%ebp), %esi	// Source
 
+	// Ensure ES=DS to prevent copy errors
+	push %ds
+	pop  %es
 
-	// Kernel code segment
+	// Copy whole dwords
+	
+	cld			// Clear direction flag (forward)
+	movl %ecx, %eax
+	shrl $2, %ecx		// Calculate dwords to copy
+	rep movsl		// Copy dwords
 
-	.word 0xffff		// Segment limit
-	.word 0x0000		// Base address (low)
-	.byte 0x00 		// Base address (middle)
-	.byte 0x9a		// Access byte (Executable, Readable, Code-Segment)
-	.byte 0x4f		// Flags
-	.byte 0x00		// Base address (high)
+	// Copy remaining bytes
+	
+	movl %eax, %ecx
+	andl $3, %ecx		// Calculate remaining bytes
+	rep movsb
 
-
-	// Kernel data segment
-
-	.word 0xffff		// Segment limit
-	.word 0x0000 		// Base address (low)
-	.byte 0x00		// Base address (middle)
-	.byte 0x92		// Access byte (Readable, Writable, Data-Segment)
-	.byte 0x4f		// Flags
-	.byte 0x00 		// Base address (high)
-
-
-
-GlobalDescriptorTable_Tail:
-
-
-GdtDescriptor:
-
-	.word GlobalDescriptorTable_Tail - GlobalDescriptorTable_Head - 1
-	.long GlobalDescriptorTable_Head
+	popl %ebp
+	ret
 	

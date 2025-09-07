@@ -27,47 +27,39 @@
 	*/
 
 
-	.section .GlobalDescriptorTable
-	.align 8
+	.global _Bitmap_WipeImplementation
+	.type _Bitmap_WipeImplementation, @function
 
-	.global GdtDescriptor
-	.type GdtDescriptor, @object
+_Bitmap_WipeImplementation:
 
-	
+	pushl %ebp
+	movl %esp, %ebp
 
-GlobalDescriptorTable_Head:
+	// Load params
 
-	// Null segment
+	movl 8(%ebp), %edi	// Pointer to bitmap
+	movl 12(%ebp), %ecx	// Bit count
 
-	.quad 0x0000000000000000
+	// Calculate bytes
 
+	addl $7, %ecx
+	shrl $3, %ecx
 
-	// Kernel code segment
+	xorl %eax, %eax
+	cld			// Clear direction flag (forward)
 
-	.word 0xffff		// Segment limit
-	.word 0x0000		// Base address (low)
-	.byte 0x00 		// Base address (middle)
-	.byte 0x9a		// Access byte (Executable, Readable, Code-Segment)
-	.byte 0x4f		// Flags
-	.byte 0x00		// Base address (high)
+	pushl %edi		// preserve EDI (callee-saved)
 
+	._Bitmap_Wipe__Clear_Loop:
 
-	// Kernel data segment
+	testl %ecx, %ecx
+	jz ._Bitmap_Wipe__Done
+	stosb
+	decl %ecx
+	jmp ._Bitmap_Wipe__Clear_Loop
 
-	.word 0xffff		// Segment limit
-	.word 0x0000 		// Base address (low)
-	.byte 0x00		// Base address (middle)
-	.byte 0x92		// Access byte (Readable, Writable, Data-Segment)
-	.byte 0x4f		// Flags
-	.byte 0x00 		// Base address (high)
+	._Bitmap_Wipe__Done:
 
-
-
-GlobalDescriptorTable_Tail:
-
-
-GdtDescriptor:
-
-	.word GlobalDescriptorTable_Tail - GlobalDescriptorTable_Head - 1
-	.long GlobalDescriptorTable_Head
-	
+	popl %edi
+	popl %ebp
+	ret	

@@ -26,48 +26,51 @@
 	
 	*/
 
-
-	.section .GlobalDescriptorTable
-	.align 8
-
-	.global GdtDescriptor
-	.type GdtDescriptor, @object
+	
+	.global _Memory_FindImplementation
+	.type _Memory_FindImplementation, @function
 
 	
+_Memory_FindImplementation:
 
-GlobalDescriptorTable_Head:
+	pushl %ebp
+	movl %esp, %ebp
 
-	// Null segment
+	movl 8(%ebp), %esi	// Block address
+	movzbl 12(%ebp), %eax	// Search Value
+	movl 16(%ebp), %ecx	// Byte count
 
-	.quad 0x0000000000000000
+	cld			// Clear direction flag (forward)
 
+	
+	._Memory_Find__Find_Loop:
 
-	// Kernel code segment
+	test %ecx, %ecx
+	je ._Memory_Find__Not_Found
 
-	.word 0xffff		// Segment limit
-	.word 0x0000		// Base address (low)
-	.byte 0x00 		// Base address (middle)
-	.byte 0x9a		// Access byte (Executable, Readable, Code-Segment)
-	.byte 0x4f		// Flags
-	.byte 0x00		// Base address (high)
+	movzb (%esi), %edx	// Load Byte
+	cmp %dl, %al
+	je ._Memory_Find__Found
 
-
-	// Kernel data segment
-
-	.word 0xffff		// Segment limit
-	.word 0x0000 		// Base address (low)
-	.byte 0x00		// Base address (middle)
-	.byte 0x92		// Access byte (Readable, Writable, Data-Segment)
-	.byte 0x4f		// Flags
-	.byte 0x00 		// Base address (high)
+	inc %esi
+	dec %ecx
+	jmp ._Memory_Find__Find_Loop
 
 
+	._Memory_Find__Found:
 
-GlobalDescriptorTable_Tail:
+	movl %esi, %eax
+	jmp ._Memory_Find__Done
 
 
-GdtDescriptor:
+	._Memory_Find__Not_Found:
 
-	.word GlobalDescriptorTable_Tail - GlobalDescriptorTable_Head - 1
-	.long GlobalDescriptorTable_Head
+	xorl %eax, %eax
+
+
+	._Memory_Find__Done:
+
+	popl %ebp
+	ret
+
 	

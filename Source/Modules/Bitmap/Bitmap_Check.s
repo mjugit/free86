@@ -27,47 +27,41 @@
 	*/
 
 
-	.section .GlobalDescriptorTable
-	.align 8
+	.global _Bitmap_CheckImplementation
+	.type _Bitmap_CheckImplementation, @function
 
-	.global GdtDescriptor
-	.type GdtDescriptor, @object
+_Bitmap_CheckImplementation:
 
+	pushl %ebp
+	movl %esp, %ebp
+
+	// Load params
+
+	movl 12(%ebp), %eax	// Bit index
+	movl 8(%ebp), %edx	// Pointer to bitmap
+
+	// Calculate offset
+
+	movl %eax, %ecx
+	shrl $3, %ecx
+
+	// Calculate bitmask
+
+	andl $7, %eax
+	pushl %ebx
+	movb $1, %bl
+	pushl %ecx		// preserve byte offset (CL will be used as shift count)
+	movb %al, %cl
+	shlb %cl, %bl
+	popl %ecx		// restore byte offset
+
+	// Test bit
+
+	movb (%edx, %ecx, 1), %al
+	testb %bl, %al
+	setne %al
+	movzx %al, %eax
 	
-
-GlobalDescriptorTable_Head:
-
-	// Null segment
-
-	.quad 0x0000000000000000
-
-
-	// Kernel code segment
-
-	.word 0xffff		// Segment limit
-	.word 0x0000		// Base address (low)
-	.byte 0x00 		// Base address (middle)
-	.byte 0x9a		// Access byte (Executable, Readable, Code-Segment)
-	.byte 0x4f		// Flags
-	.byte 0x00		// Base address (high)
-
-
-	// Kernel data segment
-
-	.word 0xffff		// Segment limit
-	.word 0x0000 		// Base address (low)
-	.byte 0x00		// Base address (middle)
-	.byte 0x92		// Access byte (Readable, Writable, Data-Segment)
-	.byte 0x4f		// Flags
-	.byte 0x00 		// Base address (high)
-
-
-
-GlobalDescriptorTable_Tail:
-
-
-GdtDescriptor:
-
-	.word GlobalDescriptorTable_Tail - GlobalDescriptorTable_Head - 1
-	.long GlobalDescriptorTable_Head
-	
+	popl %ebx
+	popl %ebp
+	ret

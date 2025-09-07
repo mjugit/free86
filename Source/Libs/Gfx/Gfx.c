@@ -31,7 +31,7 @@
 
 
 // Core functions
-void*	Gfx_Initialize(U16 width, U16 height, U8 numPlanes, HeapArea* heap);
+void*	Gfx_Initialize(U16 width, U16 height, U8 numPlanes, HeapMemory heap);
 void*	Gfx_GetBackBuffer(void);
 U32	Gfx_GetBackBufferSize(void);
 U16	Gfx_GetScreenWidth(void);

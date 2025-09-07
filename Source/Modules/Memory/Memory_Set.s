@@ -27,47 +27,40 @@
 	*/
 
 
-	.section .GlobalDescriptorTable
-	.align 8
-
-	.global GdtDescriptor
-	.type GdtDescriptor, @object
+	.global _Memory_SetImplementation
+	.type _Memory_SetImplementation, @function
 
 	
+_Memory_SetImplementation:
 
-GlobalDescriptorTable_Head:
+	pushl %ebp
+	movl  %esp, %ebp
 
-	// Null segment
+	// Load params
+	movl  8(%ebp), %edi    // Destination
+	movzbl 12(%ebp), %eax     // Value (low byte of eax)
+	movl 16(%ebp), %ecx    // Byte count
 
-	.quad 0x0000000000000000
+	cld
 
+	// Construct a dword pattern in eax
+	imull  $0x01010101, %eax  // replicate byte to all four bytes
 
-	// Kernel code segment
+	// Save original count
+	movl %ecx, %ebx
 
-	.word 0xffff		// Segment limit
-	.word 0x0000		// Base address (low)
-	.byte 0x00 		// Base address (middle)
-	.byte 0x9a		// Access byte (Executable, Readable, Code-Segment)
-	.byte 0x4f		// Flags
-	.byte 0x00		// Base address (high)
+	// Prepare for dword writes
+	movl %edx, %eax        // stosl uses eax
+	shrl $2, %ecx
+	rep stosl
 
+	// Write remaining bytes
+	movl %ebx, %ecx
+	andl $3, %ecx
+	movb 12(%ebp), %al
+	rep stosb
 
-	// Kernel data segment
+	popl %ebp
+	ret
 
-	.word 0xffff		// Segment limit
-	.word 0x0000 		// Base address (low)
-	.byte 0x00		// Base address (middle)
-	.byte 0x92		// Access byte (Readable, Writable, Data-Segment)
-	.byte 0x4f		// Flags
-	.byte 0x00 		// Base address (high)
-
-
-
-GlobalDescriptorTable_Tail:
-
-
-GdtDescriptor:
-
-	.word GlobalDescriptorTable_Tail - GlobalDescriptorTable_Head - 1
-	.long GlobalDescriptorTable_Head
 	

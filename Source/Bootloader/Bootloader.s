@@ -186,7 +186,7 @@ Bootloader_LoadKernel:
 	// Read sectors from disk
 
 	movb $0x02, %ah		// Function code
-	movb $16, %al		// Number of sectors to read
+	movb $32, %al		// Number of sectors to read
 	movb $0, %ch		// Cylinder number
 	movb $2, %cl		// Sector number
 	movb $0, %dh		// Head number

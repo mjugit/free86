@@ -28,7 +28,9 @@
 
 #include "MinUnit.h"
 
-#include "../Source/Libs/Include/Memory.h"
+#include "../Source/Modules/Include/Memory.h"
+
+use(Memory);
 
 
 MU_TEST(Memory_Copy__Always__CopiesSourceToDestination) {
