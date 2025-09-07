@@ -73,6 +73,18 @@ void Free(HeapMemory* heapArea, void* pointer);
 | `pointer`  | A pointer to the memory area to free |
 
 
+### `Defrag`
+Deferags the list of free blocks; adjacent free blocks are merged.
+
+```c
+void Defrag(HeapMemory *heapArea);
+```
+
+| Parameter  | Description                          |
+|------------|--------------------------------------|
+| `heapArea` | A pointer to the heap area to use    |
+
+
 ### `GetBytesFree`
 Get the amount of free bytes in the dynamic memory area. Note that allocations can also fail with sufficient free bytes available when no contiguous memory area can be found.
 

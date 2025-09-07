@@ -187,6 +187,38 @@ MU_TEST_SUITE(Heap_Free) {
 
 
 
+// Defrag
+
+MU_TEST(Heap_Defrag__Always__DefragsMemory) {
+  U8 testBuffer[500] = {};
+  HeapMemory* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  const U32 totalBytesFreeBeforeAlloc = Heap.GetBytesFree(heap);
+
+  void* first = Heap.Allocate(heap, 48);
+  void* second = Heap.Allocate(heap, 64);
+  void* third = Heap.Allocate(heap, 23);
+
+  Heap.Free(heap, first);
+  Heap.Free(heap, second);
+  Heap.Free(heap, third);
+  printf("Before defrag: %u bytes \n", totalBytesFreeBeforeAlloc);
+  
+  // Method to test
+  Heap.Defrag(heap);
+  printf("After defrag: %u bytes \n", Heap.GetBytesFree(heap));
+  
+  // Check result
+  mu_check(Heap.GetBytesFree(heap) == totalBytesFreeBeforeAlloc);
+  __HeapMemory_Header* header = (__HeapMemory_Header*)heap;
+  mu_check(header->FreeBlockList->NextBlock == null);
+}
+
+MU_TEST_SUITE(Heap_Defrag) {
+  MU_RUN_TEST(Heap_Defrag__Always__DefragsMemory);
+}
+
+
+
 // Helper methods
 
 MU_TEST(_Heap_SplitHeapSlice__Always_SplitsSlice) {
@@ -361,6 +393,35 @@ MU_TEST(_Heap_UnhingeSlice__WithOtherSlices__ReconnectsSlices) {
   mu_check(next.PreviousBlock == &previous);
 }
 
+MU_TEST(_Heap_FindNextSlice_NoOtherSlices_ReturnsNull) {
+  __HeapMemory_Slice slice = {
+    .NextBlock = null
+  };
+
+  mu_check(__Heap_FindNextSlice(&slice) == null);
+}
+
+MU_TEST(_Heap_FindNextSlice_WithOtherSlices_ReturnsPointer) {
+  __HeapMemory_Slice slices[3] = { };
+
+  // Setup
+  slices[0] = (__HeapMemory_Slice){
+    .NextBlock = &slices[2]
+  };
+  slices[1] = (__HeapMemory_Slice){
+    .NextBlock = null
+  };
+  slices[2] = (__HeapMemory_Slice){
+    .NextBlock = &slices[1]
+  };
+
+  // Method to test
+  __HeapMemory_Slice* result = __Heap_FindNextSlice(&slices[0]);
+
+  // Check result
+  mu_check(result == &slices[1]);
+}
+
 MU_TEST_SUITE(_Heap_Helpers) {
   MU_RUN_TEST(_Heap_SplitHeapSlice__Always_SplitsSlice);
   MU_RUN_TEST(_Heap_GetHeapSliceDataPointer__Always__ReturnsPointer);
@@ -370,6 +431,8 @@ MU_TEST_SUITE(_Heap_Helpers) {
   MU_RUN_TEST(_Heap_FindFreeSlice__SliceAvailable__ReturnsPointer);
   MU_RUN_TEST(_Heap_UnhingeSlice__NoOtherSlices__ResetsPointers);
   MU_RUN_TEST(_Heap_UnhingeSlice__WithOtherSlices__ReconnectsSlices);
+  MU_RUN_TEST(_Heap_FindNextSlice_NoOtherSlices_ReturnsNull);
+  MU_RUN_TEST(_Heap_FindNextSlice_WithOtherSlices_ReturnsPointer);
 }
 
 
@@ -378,6 +441,7 @@ int main(void) {
   MU_RUN_SUITE(Heap_Initialize);
   MU_RUN_SUITE(Heap_Allocate);
   MU_RUN_SUITE(Heap_Free);
+  MU_RUN_SUITE(Heap_Defrag);
 
   MU_RUN_SUITE(_Heap_Helpers);
   

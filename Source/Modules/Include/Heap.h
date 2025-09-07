@@ -156,6 +156,29 @@ static inline void __Heap_Unlock(__HeapMemory_Header* header) {
 }
 
 
+// Finds the folowing memory slice by its address
+__attribute__((unused))
+static inline __HeapMemory_Slice* __Heap_FindNextSlice(__HeapMemory_Slice* slice) {
+  if (!slice->NextBlock)
+    return null;
+  
+  __HeapMemory_Slice *next = slice->NextBlock;
+  for (__HeapMemory_Slice* candidate = slice; candidate; candidate = candidate->NextBlock) {
+    if (candidate <= slice)
+      continue;
+
+    void* sliceEnd = __Heap_GetHeapSliceEndPointer(slice);
+    if (candidate == sliceEnd + 1)
+      return candidate;
+
+    if (candidate < next)
+    next = candidate;
+  }
+
+  return next;
+}
+
+
 
 module(Heap) {
 
@@ -168,6 +191,9 @@ module(Heap) {
   // Free a previously allocated dynamic memory area
   void (*Free)(HeapMemory *heapArea, void* pointer);
 
+  // Merge adjacent free blocks of memory
+  void (*Defrag)(HeapMemory *heapArea);
+  
   // Get the amount of free bytes in this area
   U32 (*GetBytesFree)(HeapMemory *heapArea);
 
