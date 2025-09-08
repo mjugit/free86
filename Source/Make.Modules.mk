@@ -181,3 +181,41 @@ mod-string: $(MOD_STRING_OUTPUT)
 
 clean-mod-string:
 	rm -fr $(MOD_STRING_BUILD_PATH)
+
+
+
+# STREAM module
+MOD_STREAM_SOURCE_PATH = $(MODULES_BASE_PATH)/Stream
+MOD_STREAM_BUILD_PATH = $(MODULES_BUILD_PATH)/Stream
+MOD_STREAM_OUTPUT = $(MOD_STREAM_BUILD_PATH)/ModStream.o
+
+MOD_STREAM_ASM = $(wildcard $(MOD_STREAM_SOURCE_PATH)/*.s)
+MOD_STREAM_C = $(wildcard $(MOD_STREAM_SOURCE_PATH)/*.c)
+MOD_STREAM_SOURCE = $(MOD_STREAM_ASM) $(MOD_STREAM_C)
+
+MOD_STREAM_OBJECTS = $(patsubst $(MOD_STREAM_SOURCE_PATH)/%.c, \
+                                 $(MOD_STREAM_BUILD_PATH)/%.o, \
+                                 $(MOD_STREAM_C)) \
+                     $(patsubst $(MOD_STREAM_SOURCE_PATH)/%.s, \
+                                 $(MOD_STREAM_BUILD_PATH)/%.o, \
+                                 $(MOD_STREAM_ASM))
+
+$(MOD_STREAM_BUILD_PATH):
+	mkdir -p $(MOD_STREAM_BUILD_PATH)
+
+$(MOD_STREAM_BUILD_PATH)/%.o: $(MOD_STREAM_SOURCE_PATH)/%.s | $(MOD_STREAM_BUILD_PATH)
+	$(AS) -o $@ $<
+
+$(MOD_STREAM_BUILD_PATH)/%.o: $(MOD_STREAM_SOURCE_PATH)/%.c | $(MOD_STREAM_BUILD_PATH)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(MOD_STREAM_OUTPUT): $(MOD_STREAM_OBJECTS)
+	$(LD) -r -o $@ $^
+
+
+.PHONY: mod-stream clean-mod-stream
+
+mod-stream: $(MOD_STREAM_OUTPUT)
+
+clean-mod-stream:
+	rm -fr $(MOD_STREAM_BUILD_PATH)
