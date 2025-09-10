@@ -40,6 +40,10 @@ typedef char* string;
 module(String) {
 
   void (*Format)(string destination, const string formatStr, ...);
+
+  void (*Reverse)(string pointer);
+
+  U32 (*GetLength)(string pointer);
   
 };
 
