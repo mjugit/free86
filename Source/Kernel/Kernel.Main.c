@@ -90,125 +90,16 @@ static void KeyboardHandler(void) {
 }
 
 
-KeyCode TranslateScanCode(ScanCode scanCode) {
-    switch (scanCode) {
-        /* Letters */
-        case ScanCodeA: return KeyCodeA;
-        case ScanCodeB: return KeyCodeB;
-        case ScanCodeC: return KeyCodeC;
-        case ScanCodeD: return KeyCodeD;
-        case ScanCodeE: return KeyCodeE;
-        case ScanCodeF: return KeyCodeF;
-        case ScanCodeG: return KeyCodeG;
-        case ScanCodeH: return KeyCodeH;
-        case ScanCodeI: return KeyCodeI;
-        case ScanCodeJ: return KeyCodeJ;
-        case ScanCodeK: return KeyCodeK;
-        case ScanCodeL: return KeyCodeL;
-        case ScanCodeM: return KeyCodeM;
-        case ScanCodeN: return KeyCodeN;
-        case ScanCodeO: return KeyCodeO;
-        case ScanCodeP: return KeyCodeP;
-        case ScanCodeQ: return KeyCodeQ;
-        case ScanCodeR: return KeyCodeR;
-        case ScanCodeS: return KeyCodeS;
-        case ScanCodeT: return KeyCodeT;
-        case ScanCodeU: return KeyCodeU;
-        case ScanCodeV: return KeyCodeV;
-        case ScanCodeW: return KeyCodeW;
-        case ScanCodeX: return KeyCodeX;
-        case ScanCodeY: return KeyCodeY;
-        case ScanCodeZ: return KeyCodeZ;
-
-        /* Numbers */
-        case ScanCode1: return KeyCode1;
-        case ScanCode2: return KeyCode2;
-        case ScanCode3: return KeyCode3;
-        case ScanCode4: return KeyCode4;
-        case ScanCode5: return KeyCode5;
-        case ScanCode6: return KeyCode6;
-        case ScanCode7: return KeyCode7;
-        case ScanCode8: return KeyCode8;
-        case ScanCode9: return KeyCode9;
-        case ScanCode0: return KeyCode0;
-
-        /* Control keys */
-        case ScanCodeEnter:     return KeyCodeEnter;
-        case ScanCodeEsc:       return KeyCodeEsc;
-        case ScanCodeBackspace: return KeyCodeBackspace;
-        case ScanCodeTab:       return KeyCodeTab;
-        case ScanCodeSpace:     return KeyCodeSpace;
-
-        /* Symbols */
-        case ScanCodeMinus:      return KeyCodeMinus;
-        case ScanCodeEquals:     return KeyCodeEquals;
-        case ScanCodeLBracket:   return KeyCodeLBracket;
-        case ScanCodeRBracket:   return KeyCodeRBracket;
-        case ScanCodeBackslash:  return KeyCodeBackslash;
-        case ScanCodeSemicolon:  return KeyCodeSemicolon;
-        case ScanCodeApostrophe: return KeyCodeApostrophe;
-        case ScanCodeGrave:      return KeyCodeGrave;
-        case ScanCodeComma:      return KeyCodeComma;
-        case ScanCodePeriod:     return KeyCodePeriod;
-        case ScanCodeSlash:      return KeyCodeSlash;
-
-        /* Modifiers */
-        case ScanCodeLShift: return KeyCodeLShift;
-        case ScanCodeLCtrl:  return KeyCodeLCtrl;
-        case ScanCodeLAlt:   return KeyCodeLAlt;
-
-        /* Function keys */
-        case ScanCodeF1:  return KeyCodeF1;
-        case ScanCodeF2:  return KeyCodeF2;
-        case ScanCodeF3:  return KeyCodeF3;
-        case ScanCodeF4:  return KeyCodeF4;
-        case ScanCodeF5:  return KeyCodeF5;
-        case ScanCodeF6:  return KeyCodeF6;
-        case ScanCodeF7:  return KeyCodeF7;
-        case ScanCodeF8:  return KeyCodeF8;
-        case ScanCodeF9:  return KeyCodeF9;
-        case ScanCodeF10: return KeyCodeF10;
-        case ScanCodeF11: return KeyCodeF11;
-        case ScanCodeF12: return KeyCodeF12;
-
-        /* Extended keys */
-        case ScanCodeRCtrl:     return KeyCodeRCtrl;
-        case ScanCodeRAlt:      return KeyCodeRAlt;
-        case ScanCodeHome:      return KeyCodeHome;
-        case ScanCodeUp:        return KeyCodeUp;
-        case ScanCodePageUp:    return KeyCodePageUp;
-        case ScanCodeLeft:      return KeyCodeLeft;
-        case ScanCodeRight:     return KeyCodeRight;
-        case ScanCodeEnd:       return KeyCodeEnd;
-        case ScanCodeDown:      return KeyCodeDown;
-        case ScanCodePageDown:  return KeyCodePageDown;
-        case ScanCodeInsert:    return KeyCodeInsert;
-        case ScanCodeDelete:    return KeyCodeDelete;
-
-        default:
-            return KeyCodeError;
-    }
-}
-
-
 
 
 /* Naked attribute: no prolog/epilog */
 __attribute__((naked))
 void IrqKeyboard_Handler(void) {
-    __asm__ __volatile__(
-        "pusha\n"
-    );
+    PUSHA
 
     KeyboardHandler();
     
-    __asm__ __volatile__(
-        /* Send EOI to PIC */
-        "movb $0x20, %al\n"
-        "outb %al, $0x20\n"
-        "popa\n"
-        "iret\n"
-    );
+    EOI
 }
 
 
@@ -216,24 +107,16 @@ U32 uptimeSeconds = 0;
 U16 timerCounter = 0;
 __attribute__((naked))
 void IrqTimer_Handler(void) {
-    __asm__ __volatile__(
-        "pusha\n"
-    );
+  PUSHA
 
-    timerCounter = timerCounter + 1;
-    if (timerCounter == 100) {
-      pixelX++;
-      uptimeSeconds++;
-      timerCounter = 0;
-    }
+  timerCounter = timerCounter + 1;
+  if (timerCounter == 100) {
+    pixelX++;
+    uptimeSeconds++;
+    timerCounter = 0;
+  }
     
-    __asm__ __volatile__(
-        /* Send EOI to PIC */
-        "movb $0x20, %al\n"
-        "outb %al, $0x20\n"
-        "popa\n"
-        "iret\n"
-    );
+  EOI
 }
 
 static void InitializeTimer() {
@@ -246,6 +129,11 @@ static void InitializeTimer() {
 
     U8 timerHandlerFlags = Idt_EncodeFlags(IdtGateTypeInt32, IdtPrivilegeKernel, true);
     Idt_SetGate(&_Kernel_Idt[0x20], (U32)IrqTimer_Handler, 0x08,  timerHandlerFlags);
+}
+
+static void InitializeKeyboard() {
+  U8 keyboardHandlerFlags = Idt_EncodeFlags(IdtGateTypeInt32, IdtPrivilegeKernel, true);
+  Idt_SetGate(&_Kernel_Idt[0x21], (U32)IrqKeyboard_Handler, 0x08, keyboardHandlerFlags);
 }
 
 /* Minimal interrupt init */
@@ -263,15 +151,14 @@ static void _InitializeInterrupts() {
     PortWriteByte(0x21, 0x01);
     PortWriteByte(0xA1, 0x01);
 
-    /* Mask everything except IRQ1 (keyboard) */
-    // PortWriteByte(0x21, 0xFD);
-    /* Mask everything except IRQ1 (keyboard) and IRQ0 (timer)*/
     PortWriteByte(0x21, 0xfc);
     PortWriteByte(0xA1, 0xFF);
 
+
+    
     InitializeTimer();
-    U8 keyboardHandlerFlags = Idt_EncodeFlags(IdtGateTypeInt32, IdtPrivilegeKernel, true);
-    Idt_SetGate(&_Kernel_Idt[0x21], (U32)IrqKeyboard_Handler, 0x08, keyboardHandlerFlags);
+    InitializeKeyboard();
+    
     Idt_Load(_Kernel_Idt, &_Kernel_IdtDescriptor);
 
     EnableInterrupts();
@@ -303,7 +190,7 @@ void KernelMain() {
 
     char memText[100] = { };
     String.Format(memText,
-		  "%d free of %d bytes\0",
+		  "%d of %d bytes free.\0",
 		  Heap.GetBytesFree(_Kernel_DynMemory),
 		  Heap.GetBytesUsed(_Kernel_DynMemory) + Heap.GetBytesFree(_Kernel_DynMemory));
     
