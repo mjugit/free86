@@ -40,6 +40,8 @@ use(Heap);
 use(String);
 
 extern U16 _Kernel_LowMemoryInfoKiB;
+extern U16 _Kernel_HighMemoryInfoKiB;
+extern U16 _Kernel_EquipmentWord;
 
 
 // Dynamic memory
@@ -198,8 +200,27 @@ void KernelMain() {
     Gfx.Draw.String(340, 3, memText, 0);
 
     char scanCodeText[100] = { };
-    String.Format(scanCodeText, "%x", scanCode);
+    String.Format(scanCodeText, "Scancode   = %x", scanCode);
     Gfx.Draw.String(10, 20, scanCodeText, 4);
+
+    char memInfoText[100] = { };
+    String.Format(memInfoText, "Low memory    = %d bytes, (%d KiB)", _Kernel_LowMemoryInfoKiB * 1024, _Kernel_LowMemoryInfoKiB);
+    Gfx.Draw.String(10, 32, memInfoText, 0);
+    String.Format(memInfoText, "High Memory   = %d bytes, (%d KiB)", _Kernel_HighMemoryInfoKiB * 1024, _Kernel_HighMemoryInfoKiB);
+    Gfx.Draw.String(10, 40, memInfoText, 0);
+
+    char equipment[100] = { };
+    U16 floppyDriveCount = (_Kernel_EquipmentWord >> 6) & 0x03;
+    String.Format(equipment,   "Floppy Drives = %d", floppyDriveCount + 1);
+    Gfx.Draw.String(10, 56, equipment, 0);
+    U16 rs232Count = (_Kernel_EquipmentWord >> 9) & 0x07;
+    String.Format(equipment,   "RS232 Interf. = %d", rs232Count);
+    Gfx.Draw.String(10, 64, equipment, 0);
+    U16 hasFpu = (_Kernel_EquipmentWord >> 1) & 0x01;
+    String.Format(equipment,   "Has FPU       = %d", hasFpu);
+    Gfx.Draw.String(10, 72, equipment, 0);
+    
+    
     Gfx.Core.RefreshFromBackBuffer();
     
     __asm__ __volatile__("hlt");
