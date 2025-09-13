@@ -43,6 +43,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: free86-floppies
-          path: Build/Kickstart.img
+          path: Source/Build/Kickstart.img
         
           

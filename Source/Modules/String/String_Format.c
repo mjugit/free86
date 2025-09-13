@@ -30,11 +30,18 @@
 #include "../Include/String.h"
 
 
+use(String);
+
+
 static const string Alphabet = "0123456789abcdef";
 
 
 static void _StringFormat_WriteHexInt(U32 value, string destination, U8 length);
-static void _PrintIntAsDecimal(uint32_t value, char *buffer, int length);
+static string _Format_AsDecimal(U32 value, string buffer);
+static string _Format_AsChar(char c, string buffer);
+
+
+
 
 void _String_FormatImplementation(string destination, const string formatStr, ...) {
   va_list argumentList;
@@ -44,7 +51,7 @@ void _String_FormatImplementation(string destination, const string formatStr, ..
     if (*formatPtr != '%') {
       *destination++ = *formatPtr;
       continue;
-      }
+    }
 
     char formatType = *(formatPtr + 1);
     switch (formatType) {
@@ -82,33 +89,17 @@ void _String_FormatImplementation(string destination, const string formatStr, ..
 
 
     case 'd':
-      switch (*formatPtr) {
-      case 'b':
-	_PrintIntAsDecimal(va_arg(argumentList, int), destination, 3);
-	destination += 3;
 	formatPtr++;
-	break;
+	destination = _Format_AsDecimal(va_arg(argumentList, int), destination);
+        break;
 
-      case 'd':
-	_PrintIntAsDecimal(va_arg(argumentList, int), destination, 5);
-	destination += 5;
-	formatPtr++;
-	break;
-
-      case 'l':
-	_PrintIntAsDecimal(va_arg(argumentList, int), destination, 10);
-	destination += 10;
-	formatPtr++;
-	break;
-
-      default:
-	_PrintIntAsDecimal(va_arg(argumentList, int), destination, 10);
-	destination += 10;
-	formatPtr++;
-	break;
 	
-      }
+    case 'c':
+      formatPtr++;
+      destination = _Format_AsChar(va_arg(argumentList, int), destination);
+      break;
     }
+
     
   }
   
@@ -127,11 +118,29 @@ static void _StringFormat_WriteHexInt(U32 value, string destination, U8 length) 
   }
 }
 
-static void _PrintIntAsDecimal(uint32_t value, char *buffer, int length) {
-  buffer[length] = '\0';
+static string _Format_AsChar(char c, string buffer) {
+  if (c < 0x20 || c > 0x7f)
+    *buffer++ = '0';
+  else
+    *buffer++ = (char)c;
+
+  return buffer;
+}
+
+
+static string _Format_AsDecimal(U32 value, string buffer) {
+  char temp[32] = { };
+  string tempPtr = temp;
   
-  for (int i = length - 1; i >= 0; i--) {
-    buffer[i] = (value % 10) + '0';
+  do {
+    *tempPtr++ = (value % 10) + *Alphabet;
     value /= 10;
-  }
+  } while(value);
+
+  String.Reverse(temp);
+
+  for (char* tempChar = temp; *tempChar; tempChar++)
+    *buffer++ = *tempChar;
+  
+  return buffer;
 }

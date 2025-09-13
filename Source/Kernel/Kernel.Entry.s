@@ -51,6 +51,16 @@
 	.type _Kernel_GetLowMemorySize, @function
 	.global _Kernel_LowMemoryInfoKiB
 	.type _Kernel_LowMemoryInfoKiB, @object
+	
+	.type _Kernel_GetHighMemorySize, @function
+	.global _Kernel_HighMemoryInfoKiB
+	.type _Kernel_HighMemoryInfoKiB, @object
+
+	// Equipment
+	.type _Kernel_GetEquipmentInfo @function
+	.global _Kernel_EquipmentWord
+	.type _Kernel_EquipmentWord, @object
+	
 
 
 	// Protected Mode
@@ -73,6 +83,8 @@ Kernel_EntryPoint:
 	
 	call _Kernel_EnableHighAddressSupport
 	call _Kernel_GetLowMemorySize
+	call _Kernel_GetHighMemorySize
+	call _Kernel_GetEquipmentInfo
 	call _Kernel_EnablePlanarGraphicsMode
 
 	// Switch to Protected Mode
@@ -174,11 +186,37 @@ _Kernel_GetLowMemorySize:
 
 	ret
 
+	
+	/*
+	Get the size of the high memory area (above 1MB) and write it
+	to the global variable _HighMemoryInfoKiB.
+	*/
+
+_Kernel_GetHighMemorySize:
+
+	clc
+
+	mov $0x88, %ah
+	int $0x15
+
+	movw %ax, _Kernel_HighMemoryInfoKiB
+	jc _Kernel_Hang
+
+	ret
 
 
+	
 
 	.section .text
 	.align 4
+
+
+_Kernel_GetEquipmentInfo:
+
+	int $0x11
+	movw %ax, _Kernel_EquipmentWord
+
+	ret
 
 
 _Kernel_ProtectedMode:
@@ -223,3 +261,15 @@ _Kernel_LowMemoryInfoKiB:
 	.word 0x0
 
 	
+	// Holds the size of the machine's high memory (>1MB) in KiB
+	
+_Kernel_HighMemoryInfoKiB:
+
+	.word 0x0
+
+
+	// Holds the bitmask describing the installed hardware
+
+_Kernel_EquipmentWord:
+
+	.word 0x0

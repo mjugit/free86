@@ -30,14 +30,16 @@
 #include "../Include/String.h"
 
 
-void	_String_FormatImplementation(string destination, const string formatStr, ...);
-void	_String_ReverseImplementation(string pointer);
-U32	_String_GetLengthImplementation(string pointer);
+use(String);
 
-members(String) {
-  
-    .Format    = _String_FormatImplementation,
-    .Reverse   = _String_ReverseImplementation,
-    .GetLength = _String_GetLengthImplementation
-    
-};
+
+void _String_ReverseImplementation(string pointer) {
+  U32 length = String.GetLength(pointer);
+
+  for (U32 index = 0; index < length / 2; index++) {
+    U32 backIndex = (length - 1) - index;
+    char temp = pointer[index];
+    pointer[index] = pointer[backIndex];
+    pointer[backIndex] = temp;
+  }
+}

@@ -41,6 +41,8 @@ use(String);
 use(Keyboard);
 
 extern U16 _Kernel_LowMemoryInfoKiB;
+extern U16 _Kernel_HighMemoryInfoKiB;
+extern U16 _Kernel_EquipmentWord;
 
 
 // Dynamic memory
@@ -65,7 +67,6 @@ static IdtDescriptor _Kernel_IdtDescriptor;
 /* extern void IrqKeyboard_Stub(void); */
 
 static U16 pixelX = 0;
-
 static U8 extended = 0;
 static KeyModifiers  _KeyModifiers;
 static KeyEventArgs _KeyArgs;
@@ -85,23 +86,14 @@ static void KeyboardHandler(void) {
   };
 }
 
-
 /* Naked attribute: no prolog/epilog */
 __attribute__((naked))
 void IrqKeyboard_Handler(void) {
-    __asm__ __volatile__(
-        "pusha\n"
-    );
+    PUSHA
 
     KeyboardHandler();
     
-    __asm__ __volatile__(
-        /* Send EOI to PIC */
-        "movb $0x20, %al\n"
-        "outb %al, $0x20\n"
-        "popa\n"
-        "iret\n"
-    );
+    EOI
 }
 
 
@@ -109,24 +101,16 @@ U32 uptimeSeconds = 0;
 U16 timerCounter = 0;
 __attribute__((naked))
 void IrqTimer_Handler(void) {
-    __asm__ __volatile__(
-        "pusha\n"
-    );
+  PUSHA
 
-    timerCounter = timerCounter + 1;
-    if (timerCounter == 100) {
-      pixelX++;
-      uptimeSeconds++;
-      timerCounter = 0;
-    }
+  timerCounter = timerCounter + 1;
+  if (timerCounter == 100) {
+    pixelX++;
+    uptimeSeconds++;
+    timerCounter = 0;
+  }
     
-    __asm__ __volatile__(
-        /* Send EOI to PIC */
-        "movb $0x20, %al\n"
-        "outb %al, $0x20\n"
-        "popa\n"
-        "iret\n"
-    );
+  EOI
 }
 
 static void InitializeTimer() {
@@ -139,6 +123,11 @@ static void InitializeTimer() {
 
     U8 timerHandlerFlags = Idt_EncodeFlags(IdtGateTypeInt32, IdtPrivilegeKernel, true);
     Idt_SetGate(&_Kernel_Idt[0x20], (U32)IrqTimer_Handler, 0x08,  timerHandlerFlags);
+}
+
+static void InitializeKeyboard() {
+  U8 keyboardHandlerFlags = Idt_EncodeFlags(IdtGateTypeInt32, IdtPrivilegeKernel, true);
+  Idt_SetGate(&_Kernel_Idt[0x21], (U32)IrqKeyboard_Handler, 0x08, keyboardHandlerFlags);
 }
 
 /* Minimal interrupt init */
@@ -156,15 +145,14 @@ static void _InitializeInterrupts() {
     PortWriteByte(0x21, 0x01);
     PortWriteByte(0xA1, 0x01);
 
-    /* Mask everything except IRQ1 (keyboard) */
-    // PortWriteByte(0x21, 0xFD);
-    /* Mask everything except IRQ1 (keyboard) and IRQ0 (timer)*/
     PortWriteByte(0x21, 0xfc);
     PortWriteByte(0xA1, 0xFF);
 
+
+    
     InitializeTimer();
-    U8 keyboardHandlerFlags = Idt_EncodeFlags(IdtGateTypeInt32, IdtPrivilegeKernel, true);
-    Idt_SetGate(&_Kernel_Idt[0x21], (U32)IrqKeyboard_Handler, 0x08, keyboardHandlerFlags);
+    InitializeKeyboard();
+    
     Idt_Load(_Kernel_Idt, &_Kernel_IdtDescriptor);
 
     EnableInterrupts();
@@ -193,7 +181,7 @@ void KernelMain() {
 
     char memText[100] = { };
     String.Format(memText,
-		  "%d free of %d bytes\0",
+		  "%d of %d bytes free.\0",
 		  Heap.GetBytesFree(_Kernel_DynMemory),
 		  Heap.GetBytesUsed(_Kernel_DynMemory) + Heap.GetBytesFree(_Kernel_DynMemory));
     
@@ -203,6 +191,26 @@ void KernelMain() {
     char scanCodeText[100] = { };
     //String.Format(scanCodeText, "KeyCode = %d", _KeyArgs.KeyCode & 0xff);
     Gfx.Draw.String(10, 20, scanCodeText, 4);
+    
+
+    char memInfoText[100] = { };
+    String.Format(memInfoText, "Low memory    = %d bytes, (%d KiB)", _Kernel_LowMemoryInfoKiB * 1024, _Kernel_LowMemoryInfoKiB);
+    Gfx.Draw.String(10, 32, memInfoText, 0);
+    String.Format(memInfoText, "High Memory   = %d bytes, (%d KiB)", _Kernel_HighMemoryInfoKiB * 1024, _Kernel_HighMemoryInfoKiB);
+    Gfx.Draw.String(10, 40, memInfoText, 0);
+
+    char equipment[100] = { };
+    U16 floppyDriveCount = (_Kernel_EquipmentWord >> 6) & 0x03;
+    String.Format(equipment,   "Floppy Drives = %d", floppyDriveCount + 1);
+    Gfx.Draw.String(10, 56, equipment, 0);
+    U16 rs232Count = (_Kernel_EquipmentWord >> 9) & 0x07;
+    String.Format(equipment,   "RS232 Interf. = %d", rs232Count);
+    Gfx.Draw.String(10, 64, equipment, 0);
+    U16 hasFpu = (_Kernel_EquipmentWord >> 1) & 0x01;
+    String.Format(equipment,   "Has FPU       = %d", hasFpu);
+    Gfx.Draw.String(10, 72, equipment, 0);
+    
+    
     Gfx.Core.RefreshFromBackBuffer();
     
     __asm__ __volatile__("hlt");

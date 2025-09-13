@@ -58,6 +58,6 @@ clean-all: clean-floppy clean-kernel clean-bootloader
 
 
 run-qemu: $(FLOPPY_IMAGE_FILE)
-	qemu-system-i386 -drive if=floppy,file=$(FLOPPY_IMAGE_FILE),format=raw -m 5M -serial stdio -parallel none -rtc base=localtime -no-fd-bootchk
+	qemu-system-i386 -drive if=floppy,index=0,media=disk,file=$(FLOPPY_IMAGE_FILE),format=raw -m 5M -serial stdio -parallel none -rtc base=localtime -no-fd-bootchk
 
 

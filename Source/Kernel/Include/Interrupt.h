@@ -66,7 +66,7 @@ typedef enum {
 } IdtGateType;
 
 
-
+// Encode the IDT flags field
 static inline U8 Idt_EncodeFlags(IdtGateType gateType, IdtPrivilegeLevel privilege, bool present) {
   U8 flags = 0;
 
@@ -79,6 +79,7 @@ static inline U8 Idt_EncodeFlags(IdtGateType gateType, IdtPrivilegeLevel privile
 }
 
 
+// Set an IDT gate
 static inline void Idt_SetGate(IdtEntry* entry, U32 baseAddress, U16 selector, U8 flags) {
   entry->BaseAddressLow	 = baseAddress & 0xffff;
   entry->Selector	 = selector;
@@ -88,7 +89,27 @@ static inline void Idt_SetGate(IdtEntry* entry, U32 baseAddress, U16 selector, U
 }
 
 
+// Load the IDT
 extern void Idt_Load(IdtEntry *idt, IdtDescriptor* descriptor);
+
+
+
+
+
+
+// Invoke pusha
+#define PUSHA	__asm__ __volatile__("pusha\n");
+
+
+// Send end of interrupt to PIC
+#define EOI			        \
+  __asm__ __volatile__(			        \
+		        "movb $0x20, %al\n"	\
+		        "outb %al, $0x20\n"	\
+		        "popa\n"		\
+		        "iret\n"		\
+		        );
+
 
 
 #endif

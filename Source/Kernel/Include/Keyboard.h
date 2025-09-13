@@ -289,13 +289,13 @@ typedef void (*KeyEventHandler)(KeyEventArgs args);
 #define KEY_RGUI          0x6A
 
 
+
 module(Keyboard) {
   U16 (*ReadScanCode)(void);
   KeyCode (*GetKeyCode)(U16 scanCode);
   void (*UpdateModifiers)(KeyCode keyCode, bool keyDown, KeyModifiers *modifiers);
   char (*GetChar)(KeyCode keyCode, KeyModifiers modifiers);
 };
-
 
 
 #endif

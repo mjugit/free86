@@ -30,14 +30,10 @@
 #include "../Include/String.h"
 
 
-void	_String_FormatImplementation(string destination, const string formatStr, ...);
-void	_String_ReverseImplementation(string pointer);
-U32	_String_GetLengthImplementation(string pointer);
+U32 _String_GetLengthImplementation(string pointer) {
+  string posPtr = pointer;
+  for (;*posPtr; posPtr++)
+    ;
 
-members(String) {
-  
-    .Format    = _String_FormatImplementation,
-    .Reverse   = _String_ReverseImplementation,
-    .GetLength = _String_GetLengthImplementation
-    
-};
+  return posPtr - pointer;  
+}
