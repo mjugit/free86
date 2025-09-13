@@ -84,7 +84,7 @@ MU_TEST_SUITE(String_Reverse) {
 
 // Format
 
-MU_TEST(String_Format__Decimal__FormatsIntoDecimal) {
+MU_TEST(String_Format__PositiveDecimal__FormatsAsDecimal) {
   char testBuffer[100] = { };
   char expected[] = "1234\0";
 

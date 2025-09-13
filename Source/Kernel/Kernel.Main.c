@@ -67,6 +67,7 @@ static IdtDescriptor _Kernel_IdtDescriptor;
 
 static U16 pixelX = 0;
 ScanCode scanCode = 0;
+KeyCode keyCode = 0;
 static U8 extended = 0;
 static void KeyboardHandler(void) {
       U8 raw = PortReadByte(0x60);
@@ -85,6 +86,7 @@ static void KeyboardHandler(void) {
     }
 
     scanCode = (ScanCode)code;
+    keyCode = extended ? KeyCodeA : GermanKeyMap[scanCode];
 
     if (!isRelease) {
         pixelX++;
@@ -177,7 +179,6 @@ void KernelMain() {
   Gfx.Draw.FilledRect(0, 0, 639, 14, 7);
 
   
-  char textBuffer[100] = { };
   Gfx.Core.RefreshFromBackBuffer();
     
  
@@ -200,8 +201,9 @@ void KernelMain() {
     Gfx.Draw.String(340, 3, memText, 0);
 
     char scanCodeText[100] = { };
-    String.Format(scanCodeText, "Scancode   = %x", scanCode);
+    String.Format(scanCodeText, "Scancode   = %x, Keycode = %x\0", scanCode, keyCode);
     Gfx.Draw.String(10, 20, scanCodeText, 4);
+    
 
     char memInfoText[100] = { };
     String.Format(memInfoText, "Low memory    = %d bytes, (%d KiB)", _Kernel_LowMemoryInfoKiB * 1024, _Kernel_LowMemoryInfoKiB);
