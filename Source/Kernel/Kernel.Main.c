@@ -40,6 +40,7 @@
 use(Bitmap);
 use(Heap);
 use(String);
+use(Keyboard);
 
 
 // These are populated by the second stage bootloader
@@ -130,14 +131,18 @@ void _LoadColorTheme(void) {
 
 ScanCode scanCode = 0;
 KeyCode keyCode = 0;
+static U16 pixelX = 0;
 static U8 extended = 0;
+static KeyModifiers  _KeyModifiers;
+static KeyEventArgs _KeyArgs;
 static void KeyboardHandler(void) {
-      U8 raw = PortReadByte(0x60);
+  U16 scanCode = Keyboard.ReadScanCode();
+  if (!scanCode)
+    return;
 
-    if (raw == 0xe0 || raw == 0xe1) {
-        extended = raw;
-        return;
-    }
+  bool wasKeyDown = (scanCode & 0xFF) & 0x80;
+  U8 keyCode = Keyboard.GetKeyCode(wasKeyDown ? (scanCode - 0x80) : scanCode);
+  Keyboard.UpdateModifiers(keyCode, wasKeyDown, &_KeyModifiers);
 
     bool isRelease = (raw & 0x80) != 0;
     U16 code = raw & 0x7f;
@@ -153,10 +158,12 @@ static void KeyboardHandler(void) {
     if (!isRelease) {
       ;
     }
+  _KeyArgs = (KeyEventArgs) {
+    .KeyCode = keyCode,
+    .WasKeyPress = wasKeyDown,
+    .Modifiers = &_KeyModifiers
+  };
 }
-
-
-
 
 /* Naked attribute: no prolog/epilog */
 __attribute__((naked))
@@ -240,6 +247,8 @@ void KernelMain() {
   if (Gfx.Core.Initialize(640, 480, 4, _Kernel_DynMemory))
     Gfx.Core.RefreshFromBackBuffer();
   
+  Gfx.Draw.FilledRect(0, 0, 639, 14, 7);
+
   Gfx.Core.RefreshFromBackBuffer();
     
  
@@ -260,6 +269,7 @@ void KernelMain() {
     char scanCodeText[100] = { };
     String.Format(scanCodeText, "Scancode   = %x, Keycode = %x\0", scanCode, keyCode);
     Gfx.Draw.String(10, 20, scanCodeText, 7);
+
     
 
     char memInfoText[100] = { };
