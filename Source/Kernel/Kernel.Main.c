@@ -129,7 +129,6 @@ void _LoadColorTheme(void) {
 
 /* extern void IrqKeyboard_Stub(void); */
 
-ScanCode scanCode = 0;
 KeyCode keyCode = 0;
 static U16 pixelX = 0;
 static U8 extended = 0;
@@ -144,20 +143,6 @@ static void KeyboardHandler(void) {
   U8 keyCode = Keyboard.GetKeyCode(wasKeyDown ? (scanCode - 0x80) : scanCode);
   Keyboard.UpdateModifiers(keyCode, wasKeyDown, &_KeyModifiers);
 
-    bool isRelease = (raw & 0x80) != 0;
-    U16 code = raw & 0x7f;
-
-    if (extended) {
-        code |= (extended << 8);
-        extended = 0;
-    }
-
-    scanCode = (ScanCode)code;
-    keyCode = extended ? KeyCodeA : GermanKeyMap[scanCode];
-
-    if (!isRelease) {
-      ;
-    }
   _KeyArgs = (KeyEventArgs) {
     .KeyCode = keyCode,
     .WasKeyPress = wasKeyDown,
@@ -247,10 +232,6 @@ void KernelMain() {
   if (Gfx.Core.Initialize(640, 480, 4, _Kernel_DynMemory))
     Gfx.Core.RefreshFromBackBuffer();
   
-  Gfx.Draw.FilledRect(0, 0, 639, 14, 7);
-
-  Gfx.Core.RefreshFromBackBuffer();
-    
  
   while (1) {
     Gfx.Draw.FilledRect(0, 15, 639, 464, 5);
@@ -267,7 +248,8 @@ void KernelMain() {
 
     
     char scanCodeText[100] = { };
-    String.Format(scanCodeText, "Scancode   = %x, Keycode = %x\0", scanCode, keyCode);
+    char c = Keyboard.GetChar(_KeyArgs.KeyCode, _KeyModifiers);
+    String.Format(scanCodeText, "Keycode = %x %c\0", _KeyArgs.KeyCode, c);
     Gfx.Draw.String(10, 20, scanCodeText, 7);
 
     

@@ -26,7 +26,7 @@
 # Build path
 KERNEL_BUILD_PATH = Kernel/Build
 KINTERRUPT_BUILD_PATH = Kernel/Build/Interrupt
-KINTERRUPT_BUILD_PATH = Kernel/Build/Keyboard
+KEYBOARD_DRV_BUILD_PATH = Kernel/Build/Keyboard
 
 # Kernel sources directory
 KERNEL_SOURCES_PATH = Kernel
