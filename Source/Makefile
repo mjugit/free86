@@ -46,7 +46,7 @@ clean-floppy:
 $(FLOPPY_IMAGE_FILE): $(KERNEL_BINARY_FILE) $(BOOTLOADER_BINARY_FILE) | $(FLOPPY_BUILD_PATH)
 	dd if=/dev/zero of=$(FLOPPY_IMAGE_FILE) bs=512 count=2880 conv=notrunc
 	dd if=$(BOOTLOADER_BINARY_FILE) of=$(FLOPPY_IMAGE_FILE) bs=512 count=1 seek=0 conv=notrunc
-	dd if=$(KERNEL_BINARY_FILE) of=$(FLOPPY_IMAGE_FILE) bs=512 count=15 seek=1 conv=notrunc
+	dd if=$(KERNEL_BINARY_FILE) of=$(FLOPPY_IMAGE_FILE) bs=512 count=32 seek=1 conv=notrunc
 
 $(FLOPPY_BUILD_PATH):
 	mkdir -p $(FLOPPY_BUILD_PATH)
