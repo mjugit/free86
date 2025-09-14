@@ -34,12 +34,21 @@
 
 #include "Include/Interrupt.h"
 #include "Include/Keyboard.h"
+#include "Include/ColorTheme.h"
+
 
 use(Bitmap);
 use(Heap);
 use(String);
+use(Keyboard);
 
+
+// These are populated by the second stage bootloader
 extern U16 _Kernel_LowMemoryInfoKiB;
+extern U16 _Kernel_HighMemoryInfoKiB;
+extern U16 _Kernel_EquipmentWord;
+
+
 
 
 // Dynamic memory
@@ -61,36 +70,85 @@ static IdtDescriptor _Kernel_IdtDescriptor;
 
 
 
-/* extern void IrqKeyboard_Stub(void); */
+// Colors
 
-static U16 pixelX = 0;
-ScanCode scanCode = 0;
-static U8 extended = 0;
-static void KeyboardHandler(void) {
-      U8 raw = PortReadByte(0x60);
+void _LoadColorPalette(void) {
+  Gfx.Core.SetPaletteColor(0, RgbColorSlateBright);
+  Gfx.Core.SetPaletteColor(1, RgbColorSlateNormal);
+  Gfx.Core.SetPaletteColor(2, RgbColorSlateDark);
 
-    if (raw == 0xe0 || raw == 0xe1) {
-        extended = raw;
-        return;
-    }
+  Gfx.Core.SetPaletteColor(3, RgbColorButterBright);
+  Gfx.Core.SetPaletteColor(4, RgbColorButterNormal);
+  Gfx.Core.SetPaletteColor(5, RgbColorButterDark);
 
-    bool isRelease = (raw & 0x80) != 0;
-    U16 code = raw & 0x7f;
+  Gfx.Core.SetPaletteColor(6, RgbColorCameleonBright);
+  Gfx.Core.SetPaletteColor(7, RgbColorCameleonNormal);
+  Gfx.Core.SetPaletteColor(8, RgbColorCameleonDark);
+  
+  Gfx.Core.SetPaletteColor(9, RgbColorOrangeBright);
+  Gfx.Core.SetPaletteColor(10, RgbColorOrangeNormal);
+  Gfx.Core.SetPaletteColor(11, RgbColorOrangeDark);
+  
+  Gfx.Core.SetPaletteColor(12, RgbColorChocolateBright);
+  Gfx.Core.SetPaletteColor(13, RgbColorChocolateNormal);
+  Gfx.Core.SetPaletteColor(14, RgbColorChocolateDark);
+  
+  Gfx.Core.SetPaletteColor(15, RgbColorSkyBlueBright);
+  Gfx.Core.SetPaletteColor(16, RgbColorSkyBlueNormal);
+  Gfx.Core.SetPaletteColor(17, RgbColorSkyBlueDark);
+  
+  Gfx.Core.SetPaletteColor(18, RgbColorPlumBright);
+  Gfx.Core.SetPaletteColor(19, RgbColorPlumNormal);
+  Gfx.Core.SetPaletteColor(20, RgbColorPlumDark);
+  
+  Gfx.Core.SetPaletteColor(21, RgbColorScarletRedBright);
+  Gfx.Core.SetPaletteColor(22, RgbColorScarletRedNormal);
+  Gfx.Core.SetPaletteColor(23, RgbColorScarletRedDark);
+  
+  Gfx.Core.SetPaletteColor(24, RgbColorAluminiumBright);
+  Gfx.Core.SetPaletteColor(25, RgbColorAluminiumNormal);
+  Gfx.Core.SetPaletteColor(26, RgbColorAluminiumDark);
+}
 
-    if (extended) {
-        code |= (extended << 8);
-        extended = 0;
-    }
+void _LoadColorTheme(void) {
+  Gfx.Core.UsePaletteColor(0, 2); // Black
+  Gfx.Core.UsePaletteColor(1, 4); // Yellow
+  Gfx.Core.UsePaletteColor(2, 7); // Green
+  Gfx.Core.UsePaletteColor(3, 10); // Orange
+  Gfx.Core.UsePaletteColor(4, 13); // Brown
+  Gfx.Core.UsePaletteColor(5, 16); // Blue
+  Gfx.Core.UsePaletteColor(6, 19); // Purple
+  Gfx.Core.UsePaletteColor(7, 21); // Red
+  Gfx.Core.UsePaletteColor(8, 25); // Grey
 
-    scanCode = (ScanCode)code;
-
-    if (!isRelease) {
-        pixelX++;
-    }
+  // Colors 9 - f are free at the moment
 }
 
 
 
+
+/* extern void IrqKeyboard_Stub(void); */
+
+KeyCode keyCode = 0;
+static U16 pixelX = 0;
+static U8 extended = 0;
+static KeyModifiers  _KeyModifiers;
+static KeyEventArgs _KeyArgs;
+static void KeyboardHandler(void) {
+  U16 scanCode = Keyboard.ReadScanCode();
+  if (!scanCode)
+    return;
+
+  bool wasKeyDown = (scanCode & 0xFF) & 0x80;
+  U8 keyCode = Keyboard.GetKeyCode(wasKeyDown ? (scanCode - 0x80) : scanCode);
+  Keyboard.UpdateModifiers(keyCode, wasKeyDown, &_KeyModifiers);
+
+  _KeyArgs = (KeyEventArgs) {
+    .KeyCode = keyCode,
+    .WasKeyPress = wasKeyDown,
+    .Modifiers = &_KeyModifiers
+  };
+}
 
 /* Naked attribute: no prolog/epilog */
 __attribute__((naked))
@@ -111,7 +169,6 @@ void IrqTimer_Handler(void) {
 
   timerCounter = timerCounter + 1;
   if (timerCounter == 100) {
-    pixelX++;
     uptimeSeconds++;
     timerCounter = 0;
   }
@@ -169,37 +226,52 @@ void KernelMain() {
   _InitializeHeap();
   _InitializeInterrupts();
 
+  _LoadColorPalette();
+  _LoadColorTheme();
+
   if (Gfx.Core.Initialize(640, 480, 4, _Kernel_DynMemory))
     Gfx.Core.RefreshFromBackBuffer();
   
-  Gfx.Draw.FilledRect(0, 0, 639, 14, 7);
-
-  
-  char textBuffer[100] = { };
-  Gfx.Core.RefreshFromBackBuffer();
-    
  
   while (1) {
-    Gfx.Draw.Pixel(pixelX, 479, 4);
-    Gfx.Draw.FilledRect(5, 19, 630, 451, 15);
-
+    Gfx.Draw.FilledRect(0, 15, 639, 464, 5);
+    Gfx.Draw.FilledRect(0, 0, 639, 14, 1);
     
-    Gfx.Draw.FilledRect(0, 0, 639, 14, 7);
-    char timeText[100] = { };
-    String.Format(timeText, "Up %d secs\0", uptimeSeconds);
-
-    char memText[100] = { };
-    String.Format(memText,
-		  "%d of %d bytes free.\0",
+    char headerBarTextBuffer[100] = { };
+    String.Format(headerBarTextBuffer,
+		  "Heap: %d free, %d used\0", 
 		  Heap.GetBytesFree(_Kernel_DynMemory),
-		  Heap.GetBytesUsed(_Kernel_DynMemory) + Heap.GetBytesFree(_Kernel_DynMemory));
-    
-    Gfx.Draw.String(10, 3, timeText, 0);
-    Gfx.Draw.String(340, 3, memText, 0);
+		  Heap.GetBytesUsed(_Kernel_DynMemory));
+    Gfx.Draw.String(10, 3, headerBarTextBuffer, 0);
+    String.Format(headerBarTextBuffer, "Uptime: %d seconds", uptimeSeconds);
+    Gfx.Draw.String(320, 3, headerBarTextBuffer, 0);
 
+    
     char scanCodeText[100] = { };
-    String.Format(scanCodeText, "%x", scanCode);
-    Gfx.Draw.String(10, 20, scanCodeText, 4);
+    char c = Keyboard.GetChar(_KeyArgs.KeyCode, _KeyModifiers);
+    String.Format(scanCodeText, "Keycode = %x %c\0", _KeyArgs.KeyCode, c);
+    Gfx.Draw.String(10, 20, scanCodeText, 7);
+
+    
+
+    char memInfoText[100] = { };
+    String.Format(memInfoText, "Low memory    = %d bytes, (%d KiB)", _Kernel_LowMemoryInfoKiB * 1024, _Kernel_LowMemoryInfoKiB);
+    Gfx.Draw.String(10, 32, memInfoText, 8);
+    String.Format(memInfoText, "High Memory   = %d bytes, (%d KiB)", _Kernel_HighMemoryInfoKiB * 1024, _Kernel_HighMemoryInfoKiB);
+    Gfx.Draw.String(10, 40, memInfoText, 8);
+
+    char equipment[100] = { };
+    U16 floppyDriveCount = (_Kernel_EquipmentWord >> 6) & 0x03;
+    String.Format(equipment,   "Floppy Drives = %d", floppyDriveCount + 1);
+    Gfx.Draw.String(10, 56, equipment, 8);
+    U16 rs232Count = (_Kernel_EquipmentWord >> 9) & 0x07;
+    String.Format(equipment,   "RS232 Interf. = %d", rs232Count);
+    Gfx.Draw.String(10, 64, equipment, 8);
+    U16 hasFpu = (_Kernel_EquipmentWord >> 1) & 0x01;
+    String.Format(equipment,   "Has FPU       = %d", hasFpu);
+    Gfx.Draw.String(10, 72, equipment, 8);
+    
+    
     Gfx.Core.RefreshFromBackBuffer();
     
     __asm__ __volatile__("hlt");

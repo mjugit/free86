@@ -37,7 +37,7 @@
 use(Memory);
 use(Heap);
 
-typedef struct __Gfx_Rgb64 {
+typedef struct Rgb64 {
   U8 Red;
   U8 Green;
   U8 Blue;

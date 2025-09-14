@@ -38,6 +38,9 @@ static const string Alphabet = "0123456789abcdef";
 
 static void _StringFormat_WriteHexInt(U32 value, string destination, U8 length);
 static string _Format_AsDecimal(U32 value, string buffer);
+static string _Format_AsChar(char c, string buffer);
+
+
 
 
 void _String_FormatImplementation(string destination, const string formatStr, ...) {
@@ -48,7 +51,7 @@ void _String_FormatImplementation(string destination, const string formatStr, ..
     if (*formatPtr != '%') {
       *destination++ = *formatPtr;
       continue;
-      }
+    }
 
     char formatType = *(formatPtr + 1);
     switch (formatType) {
@@ -89,7 +92,14 @@ void _String_FormatImplementation(string destination, const string formatStr, ..
 	formatPtr++;
 	destination = _Format_AsDecimal(va_arg(argumentList, int), destination);
         break;
+
+	
+    case 'c':
+      formatPtr++;
+      destination = _Format_AsChar(va_arg(argumentList, int), destination);
+      break;
     }
+
     
   }
   
@@ -106,6 +116,15 @@ static void _StringFormat_WriteHexInt(U32 value, string destination, U8 length) 
     destination[length] = Alphabet[value & 0xf];
     value >>= 4;
   }
+}
+
+static string _Format_AsChar(char c, string buffer) {
+  if (c < 0x20 || c > 0x7f)
+    *buffer++ = '0';
+  else
+    *buffer++ = (char)c;
+
+  return buffer;
 }
 
 
