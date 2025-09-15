@@ -30,7 +30,7 @@
 #include "../Include/Gfx.h"
 
 static U8* _VRamAddress = (U8*)0xa0000;
-static U8* _BackBufferAddress = 0;
+U8* _BackBufferAddress = 0;
 static U32 _BackBufferSize = 0;
 
 static U16 _ScreenWidth = 0;

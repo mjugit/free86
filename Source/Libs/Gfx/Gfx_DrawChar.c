@@ -27,6 +27,7 @@
 */
 
 #include "../Include/Gfx.h"
+#include "../../Kernel/Include/FontWidget.h"
 
 
 static const Char8x8 Font8x8[128] = {
@@ -160,15 +161,38 @@ static const Char8x8 Font8x8[128] = {
   { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}    // U+007F
 };
 
-
+extern U8* _BackBufferAddress;
 
 __attribute__((unused))
 void Gfx_DrawChar(U16 x, U16 y, char character, U8 color) {
- const U8 *bitmap = Font8x8[(U8)character];
+  if ((U8)character < 0x20 || (U8)character > 0x7F)
+    return;
+
+  U16 glyph = (U8)character - 0x20;
+  const U8* bitmap = &FONT_WIDGET_BITMAP[glyph * 8];
+
   for (U16 row = 0; row < 8; row++) {
+    U8 bits = bitmap[row];
     for (U16 col = 0; col < 8; col++) {
-      if (bitmap[row] & (1 <<  col)) {
-        Gfx.Draw.Pixel(x + col, y + row, color);
+      if (bits & (1 << (7 - col))) {
+	U16 px = x + col;
+	U16 py = y + row;
+	if (px >= 640 || py >= 480)
+	  continue;
+
+	U8 planeMask = 1;
+	for (U8 plane = 0; plane < 4; plane++, planeMask <<= 1) {
+	  U8 planeBit = (color & planeMask) ? 1 : 0;
+
+	  U32 byte_offset = (py * 80) + (px / 8);
+	  U8  bit_mask = 0x80 >> (px & 7);
+
+	  U8* dest = _BackBufferAddress + (plane * 38400) + byte_offset;
+	  if (planeBit)
+	    *dest |= bit_mask;
+	  else
+	    *dest &= ~bit_mask;
+	}
       }
     }
   }
