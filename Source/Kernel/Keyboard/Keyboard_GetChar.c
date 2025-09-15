@@ -76,7 +76,9 @@ static const KeyMapEntry _GermanKeyMap[0xff] = {
   [KEY_BACKSLASH] = { '#', '\'', 0, 0 },
   [KEY_RBRACKET] = { '+', '*', 0, '~' },
   [KEY_LBRACKET] = { 'u', 'U', 0, 0 },
-  [KEY_MINUS] = { '_', '?', 0, '\\'}
+  [KEY_MINUS] = { '_', '?', 0, '\\'},
+  [KEY_BACKSPACE] = { '\b', '\b', '\b' },
+  [KEY_ENTER] = { '\n', '\n', '\n' }
 };
 
 

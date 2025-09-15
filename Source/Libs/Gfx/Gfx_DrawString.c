@@ -34,13 +34,20 @@ void Gfx_DrawString(U16 x, U16 y, const char *string, U8 color) {
   if (!string)
     return;
 
+  U16 offsetX = x;
   U16 screenWidth = Gfx.Core.GetScreenWidth();
   for (const char *ptr = string; *ptr; ptr++) {
-    Gfx.Draw.Char(x, y, *ptr, color);
+    if (*ptr == '\n') {
+      offsetX = x;
+      y += 8;
+      continue;
+    }
+    
+    Gfx.Draw.Char(offsetX, y, *ptr, color);
 
-    x += 8;
-    if (x >= screenWidth) {
-      x = 0;
+    offsetX += 8;
+    if (offsetX >= screenWidth) {
+      offsetX = 0;
       y += 8;
     }
   }

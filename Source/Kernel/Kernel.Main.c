@@ -29,6 +29,7 @@
 #include "../Modules/Include/Heap.h"
 #include "../Modules/Include/Bitmap.h"
 #include "../Modules/Include/String.h"
+#include "../Modules/Include/Stream.h"
 
 #include "../Libs/Include/Gfx.h"
 
@@ -38,6 +39,7 @@
 
 
 use(Bitmap);
+use(Stream);
 use(Heap);
 use(String);
 use(Keyboard);
@@ -70,63 +72,6 @@ static IdtDescriptor _Kernel_IdtDescriptor;
 
 
 
-// Colors
-
-void _LoadColorPalette(void) {
-  Gfx.Core.SetPaletteColor(0, RgbColorSlateBright);
-  Gfx.Core.SetPaletteColor(1, RgbColorSlateNormal);
-  Gfx.Core.SetPaletteColor(2, RgbColorSlateDark);
-
-  Gfx.Core.SetPaletteColor(3, RgbColorButterBright);
-  Gfx.Core.SetPaletteColor(4, RgbColorButterNormal);
-  Gfx.Core.SetPaletteColor(5, RgbColorButterDark);
-
-  Gfx.Core.SetPaletteColor(6, RgbColorCameleonBright);
-  Gfx.Core.SetPaletteColor(7, RgbColorCameleonNormal);
-  Gfx.Core.SetPaletteColor(8, RgbColorCameleonDark);
-  
-  Gfx.Core.SetPaletteColor(9, RgbColorOrangeBright);
-  Gfx.Core.SetPaletteColor(10, RgbColorOrangeNormal);
-  Gfx.Core.SetPaletteColor(11, RgbColorOrangeDark);
-  
-  Gfx.Core.SetPaletteColor(12, RgbColorChocolateBright);
-  Gfx.Core.SetPaletteColor(13, RgbColorChocolateNormal);
-  Gfx.Core.SetPaletteColor(14, RgbColorChocolateDark);
-  
-  Gfx.Core.SetPaletteColor(15, RgbColorSkyBlueBright);
-  Gfx.Core.SetPaletteColor(16, RgbColorSkyBlueNormal);
-  Gfx.Core.SetPaletteColor(17, RgbColorSkyBlueDark);
-  
-  Gfx.Core.SetPaletteColor(18, RgbColorPlumBright);
-  Gfx.Core.SetPaletteColor(19, RgbColorPlumNormal);
-  Gfx.Core.SetPaletteColor(20, RgbColorPlumDark);
-  
-  Gfx.Core.SetPaletteColor(21, RgbColorScarletRedBright);
-  Gfx.Core.SetPaletteColor(22, RgbColorScarletRedNormal);
-  Gfx.Core.SetPaletteColor(23, RgbColorScarletRedDark);
-  
-  Gfx.Core.SetPaletteColor(24, RgbColorAluminiumBright);
-  Gfx.Core.SetPaletteColor(25, RgbColorAluminiumNormal);
-  Gfx.Core.SetPaletteColor(26, RgbColorAluminiumDark);
-}
-
-void _LoadColorTheme(void) {
-  Gfx.Core.UsePaletteColor(0, 2); // Black
-  Gfx.Core.UsePaletteColor(1, 4); // Yellow
-  Gfx.Core.UsePaletteColor(2, 7); // Green
-  Gfx.Core.UsePaletteColor(3, 10); // Orange
-  Gfx.Core.UsePaletteColor(4, 13); // Brown
-  Gfx.Core.UsePaletteColor(5, 16); // Blue
-  Gfx.Core.UsePaletteColor(6, 19); // Purple
-  Gfx.Core.UsePaletteColor(7, 21); // Red
-  Gfx.Core.UsePaletteColor(8, 25); // Grey
-
-  // Colors 9 - f are free at the moment
-}
-
-
-
-
 /* extern void IrqKeyboard_Stub(void); */
 
 KeyCode keyCode = 0;
@@ -134,6 +79,8 @@ static U16 pixelX = 0;
 static U8 extended = 0;
 static KeyModifiers  _KeyModifiers;
 static KeyEventArgs _KeyArgs;
+
+static stream inputStream;
 static void KeyboardHandler(void) {
   U16 scanCode = Keyboard.ReadScanCode();
   if (!scanCode)
@@ -148,6 +95,10 @@ static void KeyboardHandler(void) {
     .WasKeyPress = wasKeyDown,
     .Modifiers = &_KeyModifiers
   };
+
+  char character = Keyboard.GetChar(keyCode, _KeyModifiers);
+  if (character && _KeyArgs.WasKeyPress)
+    Stream.Write(&inputStream, &character, 1);
 }
 
 /* Naked attribute: no prolog/epilog */
@@ -226,31 +177,33 @@ void KernelMain() {
   _InitializeHeap();
   _InitializeInterrupts();
 
-  _LoadColorPalette();
-  _LoadColorTheme();
 
   if (Gfx.Core.Initialize(640, 480, 4, _Kernel_DynMemory))
     Gfx.Core.RefreshFromBackBuffer();
   
- 
-  while (1) {
-    Gfx.Draw.FilledRect(0, 15, 639, 464, 5);
-    Gfx.Draw.FilledRect(0, 0, 639, 14, 1);
-    
-    char headerBarTextBuffer[100] = { };
-    String.Format(headerBarTextBuffer,
-		  "Heap: %d free, %d used\0", 
-		  Heap.GetBytesFree(_Kernel_DynMemory),
-		  Heap.GetBytesUsed(_Kernel_DynMemory));
-    Gfx.Draw.String(10, 3, headerBarTextBuffer, 0);
-    String.Format(headerBarTextBuffer, "Uptime: %d seconds", uptimeSeconds);
-    Gfx.Draw.String(320, 3, headerBarTextBuffer, 0);
 
-    
+  char textBuffer[2048] = "_\0";
+  char *buffPtr = textBuffer;
+
+  U16 row = 1;
+  
+  while (1) {
+    Gfx.Draw.FilledRect(0, 0, 639, 479, 0);
     char scanCodeText[100] = { };
-    char c = Keyboard.GetChar(_KeyArgs.KeyCode, _KeyModifiers);
-    String.Format(scanCodeText, "Keycode = %x %c\0", _KeyArgs.KeyCode, c);
-    Gfx.Draw.String(10, 20, scanCodeText, 7);
+    char c;
+    if (Stream.Read(&inputStream, &c, 1)) {
+      if (c == '\b') {
+	*buffPtr = '\0';
+	if (buffPtr > textBuffer)
+	  buffPtr--;
+	*buffPtr = '\0';
+      } else {
+	*buffPtr++ = c;
+      }
+
+      *buffPtr = '_';
+    }
+    Gfx.Draw.String(10, 100 + (row * 8), textBuffer, 15);
 
     
 
