@@ -39,7 +39,7 @@ static U8 _NumPlanes = 0;
 
 
 __attribute__((unused))
-void* Gfx_Initialize(U16 width, U16 height, U8 numPlanes, HeapMemory heap) {
+void* Gfx_Initialize(U16 width, U16 height, U8 numPlanes, HeapArea* heap) {
   // Skip if already initialized
   if (_BackBufferAddress)
     return _BackBufferAddress;

@@ -63,7 +63,7 @@ struct __Gfx_Port_Namespace {
 };
 
 struct __Gfx_Core_Namespaces {
-  void* (*Initialize)(U16 width, U16 height, U8 numPlanes, HeapMemory heap);
+  void* (*Initialize)(U16 width, U16 height, U8 numPlanes, HeapArea* heap);
   void* (*GetBackBuffer)(void);
   U32 (*GetBackBufferSize)(void);
   U16 (*GetScreenWidth)(void);
