@@ -29,49 +29,40 @@
 
 #include "../Include/Heap.h"
 
+static MemorySlice* _TryGetFreeSlice(HeapArea* heap, U32 minSize);
 
-void* _Heap_AllocateImplementation(HeapMemory heapArea, U32 size) {
-  __HeapMemory_Header* header = (__HeapMemory_Header*)heapArea;
 
-  // Fast check
-  if (header->TotalBytesFree < size)
+void* _Heap_AllocateImplementation(HeapArea* heap, U32 size) {
+  if (size > heap->TotalBytesFree)
     return null;
 
-  __Heap_Lock(header);
-  // Traverse list of free slices
-  __HeapMemory_Slice* freeSlice = __Heap_FindFreeSlice(header->FreeBlockList, size);
-  if (!freeSlice) {
-    __Heap_Unlock(header);
+  U32 minSize = _Heap_AlignSize(size);
+  MemorySlice* freeSlice = _TryGetFreeSlice(heap, minSize);
+  if (!freeSlice)
     return null;
-  }
 
+  if (heap->FreeSlicesList == freeSlice)
+    heap->FreeSlicesList = _Heap_SplitMemorySlice(freeSlice, minSize);
+  else
+    _Heap_SplitMemorySlice(freeSlice, minSize);
+  heap->TotalBytesFree -= _Heap_AlignSize(minSize + sizeof(MemorySlice));
   
-  // Will hold the result
-  __HeapMemory_Slice* allocSlice = null;
-
-  if (freeSlice->Size > size) {
-    allocSlice = __Heap_SplitHeapSlice(freeSlice, size);
-  } else {
-    if (freeSlice == header->FreeBlockList && !freeSlice->NextBlock)
-      header->FreeBlockList = null;
-    
-    __Heap_UnhingeSlice(freeSlice);
-    allocSlice = freeSlice;
-  }
-
-
-  // Mark block as used
-  allocSlice->NextBlock = header->UsedBlockList;
-  if (allocSlice->NextBlock)
-    allocSlice->NextBlock->PreviousBlock = allocSlice;
-  header->UsedBlockList = allocSlice;
-
-  // Update counters
-  U32 totalSize = size + sizeof(__HeapMemory_Slice);
-  header->TotalBytesFree -= totalSize;
-  header->TotalBytesUsed += totalSize;
-
-  __Heap_Unlock(header);
+  if (!heap->UsedSlicesList)
+    heap->UsedSlicesList = freeSlice;
+  else
+    _Heap_InsertListItemBefore(heap->UsedSlicesList, freeSlice);
+  heap->TotalBytesUsed += _Heap_AlignSize(minSize + sizeof(MemorySlice));
   
-  return __Heap_GetHeapSliceDataPointer(allocSlice);
+  return _Heap_GetSliceDataStart(freeSlice);
+}
+
+
+static MemorySlice* _TryGetFreeSlice(HeapArea* heap, U32 minSize) {
+  U32 requiredSize = _Heap_AlignSize(minSize + sizeof(MemorySlice));
+  
+  for (MemorySlice* slice = heap->FreeSlicesList; slice; slice = slice->NextSlice)
+    if (slice->UsableBytes >= requiredSize)
+      return slice;
+
+  return null;
 }

@@ -30,25 +30,51 @@
 #include "../Include/Heap.h"
 
 
-void _Heap_FreeImplementation(HeapMemory heapArea, void* pointer) {
-  __HeapMemory_Header* header = (__HeapMemory_Header*)heapArea;
+void _Heap_Free_Implementation(HeapArea* heap, void* pointer) {
+  MemorySlice* slice = _Heap_GetSliceHeaderPointer(pointer);
 
-  if (pointer < (void*)heapArea ||
-      (pointer > (void*)heapArea + header->MemoryAreaSize))
-    return;
-
-  __Heap_Lock(header);
-  __HeapMemory_Slice* slice = (__HeapMemory_Slice*)__Heap_GetHeapSliceStartPointer(pointer);
-  if (header->UsedBlockList == slice)
-    header->UsedBlockList = slice->NextBlock;
-  __Heap_UnhingeSlice(slice);
+  if (heap->UsedSlicesList == slice)
+    heap->UsedSlicesList = slice->NextSlice;
   
-  slice->NextBlock = header->FreeBlockList;
-  if (slice->NextBlock)
-    slice->NextBlock->PreviousBlock = slice;
-  header->FreeBlockList = slice;
+  _Heap_UnhingeListItem(slice);
+  
+  // Find correct insert position in FreeSlicesList
+  MemorySlice* current = heap->FreeSlicesList;
+  MemorySlice* prev = null;
+  while (current && current < slice) {
+    prev = current;
+    current = current->NextSlice;
+  }
 
-  header->TotalBytesUsed -= slice->Size + sizeof(__HeapMemory_Slice);
-  header->TotalBytesFree += slice->Size;
-  __Heap_Unlock(header);
+  // Insert the slice in FreeSlicesList
+  slice->PreviousSlice = prev;
+  slice->NextSlice = current;
+  if (prev)
+    prev->NextSlice = slice;
+  else
+    heap->FreeSlicesList = slice;
+  
+  if (current)
+    current->PreviousSlice = slice;
+
+  // Try to merge with previous
+  if (prev && ((U8*)_Heap_GetSliceDataEnd(prev) == (U8*)slice)) {
+    prev->UsableBytes += ((U8*)_Heap_GetSliceDataEnd(slice) - (U8*)slice);
+    prev->NextSlice = slice->NextSlice;
+    
+    if (slice->NextSlice)
+      slice->NextSlice->PreviousSlice = prev;
+    slice = prev;
+  }
+  
+  // Try to merge with next
+  if (slice->NextSlice && ((U8*)_Heap_GetSliceDataEnd(slice) == (U8*)slice->NextSlice)) {
+    MemorySlice* next = slice->NextSlice;
+    slice->UsableBytes += ((U8*)_Heap_GetSliceDataEnd(next) - (U8*)next);
+    slice->NextSlice = next->NextSlice;
+    
+    if (next->NextSlice)
+      next->NextSlice->PreviousSlice = slice;
+  }
 }
+

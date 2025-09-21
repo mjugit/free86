@@ -27,180 +27,157 @@
 */
 
 
-#ifndef __HEAP_H__
-#define __HEAP_H__
+#ifndef __HEAP_MEMORY__
+#define __HEAP_MEMORY__
 
 #include "SystemCore.h"
 
 
-// A pointer to a dynamic memory area
-typedef void* HeapMemory;
 
 
-// Holds the meta information about a continuous block of memory
-typedef struct __HeapMemory_Slice {
-  struct __HeapMemory_Slice* NextBlock;
-  struct __HeapMemory_Slice* PreviousBlock;
-  
-  U32 Size;
-} __HeapMemory_Slice;
+// This is the header of a continuous memory area
+typedef struct MemorySlice {
+  // The amount of usable bytes
+  U32 UsableBytes;
+
+  // Pointer to the next slice in the list
+  struct MemorySlice *NextSlice;
+  // Pointer to the previous slice in the list
+  struct MemorySlice *PreviousSlice;
+} MemorySlice;
 
 
-// Holds the meta information about a dynamic memory area
-typedef struct __HeapMemory_Header {
-  U32 MemoryAreaSize;
+
+// This header represents the memory area itself
+typedef struct HeapArea {
+  // Holds the total size in bytes (including the header)
+  U32 TotalBytes;
+  // Holds the amount of bytes that can be allocated (without their headers)
   U32 TotalBytesFree;
+  // Holds the amount of bytes that have been allocated
   U32 TotalBytesUsed;
 
-  bool IsLocked;
-  U8 HeapHeaderSize;
-
-  void* HeapDataStart;
-  __HeapMemory_Slice* FreeBlockList;
-  __HeapMemory_Slice* UsedBlockList;
-} __HeapMemory_Header;
+  // The head of the list of free slices
+  struct MemorySlice *FreeSlicesList;
+  // The head of the list of allocated slices
+  struct MemorySlice *UsedSlicesList;
+} HeapArea;
 
 
 
-/*
- * REMARK:
- * Most of the methods below are only used once or twice and don't realy do much.
- * They enhance the readability of the code drastically though, so they are marked
- * as inline. This also improves the overall performance.
- */
+#define _HEAP_PTR_ALIGNMENT 8
 
-
-// Get a pointer to the data area of a memory block
 __attribute__((unused))
-static inline void* __Heap_GetHeapSliceDataPointer(__HeapMemory_Slice* slice) {
-  return (void*)slice + sizeof(__HeapMemory_Slice);
+static inline void* _Heap_AlignPointer(void* pointer) {
+    U32 address = (U32)pointer;
+    U32 aligned = (address + (_HEAP_PTR_ALIGNMENT - 1)) & ~(_HEAP_PTR_ALIGNMENT - 1);
+    
+    return (void*)aligned;
+}
+
+__attribute__((unused))
+static inline U32 _Heap_AlignSize(U32 size) {
+    U32 aligned = (size + (_HEAP_PTR_ALIGNMENT - 1)) & ~(_HEAP_PTR_ALIGNMENT - 1);
+    
+    return aligned < _HEAP_PTR_ALIGNMENT
+      ? _HEAP_PTR_ALIGNMENT
+      : aligned;
+}
+
+__attribute__((unused))
+static inline void* _Heap_GetSliceDataStart(MemorySlice* slice) {
+  return _Heap_AlignPointer((void*)slice + sizeof(MemorySlice));
+}
+
+__attribute__((unused))
+static inline void* _Heap_GetSliceDataEnd(MemorySlice* slice) {
+  return _Heap_AlignPointer(_Heap_GetSliceDataStart(slice) + slice->UsableBytes);
 }
 
 
-// Get a pointer to the start of a memory slice based on the data pointer
 __attribute__((unused))
-static inline __HeapMemory_Slice* __Heap_GetHeapSliceStartPointer(void* dataPointer) {
-  return dataPointer - sizeof(__HeapMemory_Slice);
+static inline void _Heap_UnhingeListItem(MemorySlice* item) {
+  if (item->PreviousSlice)
+    item->PreviousSlice->NextSlice = item->NextSlice;
+  if (item->NextSlice)
+    item->NextSlice->PreviousSlice = item->PreviousSlice;
+
+  item->NextSlice = item->PreviousSlice = null;
 }
 
 
-// Get a pointer to the end of a memory slice based on the start pointer
 __attribute__((unused))
-static inline void* __Heap_GetHeapSliceEndPointer(__HeapMemory_Slice* slice) {
-  return (void*)slice + sizeof(__HeapMemory_Slice) + slice->Size;
+static inline void _Heap_InsertListItemBefore(MemorySlice* next, MemorySlice* item) {
+  if (next->PreviousSlice)
+    next->PreviousSlice->NextSlice = item;
+  
+  item->PreviousSlice = next->PreviousSlice;
+  item->NextSlice = next;
+  next->PreviousSlice = item;
 }
 
 
-// Split a slice of continuous memory
 __attribute__((unused))
-static inline __HeapMemory_Slice* __Heap_SplitHeapSlice(__HeapMemory_Slice* slice, U32 size) {
-  U32 newSliceSize = size + sizeof(__HeapMemory_Slice);
-  void *newSlicePtr = __Heap_GetHeapSliceEndPointer(slice) - newSliceSize;
+static inline void _Heap_InsertListItemAfter(MemorySlice* previous, MemorySlice* item) {
+  if (previous->NextSlice)
+    previous->NextSlice->PreviousSlice = item;
 
-  // Update original slice
-  slice->Size -= newSliceSize;
+  item->NextSlice = previous->NextSlice;
+  item->PreviousSlice = previous;
+  previous->NextSlice = item;
+}
 
-  // Configure new slice
-  __HeapMemory_Slice* newSlice = (__HeapMemory_Slice*)newSlicePtr;
-  *newSlice = (__HeapMemory_Slice) {
-    .NextBlock = null,
-    .PreviousBlock = null,
-    .Size = size
+
+__attribute__((unused))
+static inline MemorySlice* _Heap_SplitMemorySlice(MemorySlice* slice, U32 size) {
+  void* currentSliceEnd = _Heap_GetSliceDataEnd(slice);
+  
+  MemorySlice* newSlice = slice;
+  void* newSliceDataStart = _Heap_GetSliceDataStart(newSlice);
+
+  MemorySlice* remainingSlice = _Heap_AlignPointer(newSliceDataStart + size);
+  void* remainingSliceDataStart = _Heap_GetSliceDataStart(remainingSlice);
+
+  *remainingSlice = (MemorySlice) {
+    .UsableBytes = (void*)currentSliceEnd - (void*)remainingSliceDataStart,
+    .NextSlice = slice->NextSlice,
+    .PreviousSlice = slice->PreviousSlice,
   };
 
-  return newSlice;
+  if (slice->NextSlice)
+    slice->NextSlice->PreviousSlice = remainingSlice;
+  if (slice->PreviousSlice)
+    slice->PreviousSlice->NextSlice = remainingSlice;
+
+  *newSlice = (MemorySlice) {
+    .UsableBytes = (void*)remainingSlice - (void*)newSliceDataStart,
+    .NextSlice = null,
+    .PreviousSlice = null
+  };
+
+  return remainingSlice;
 }
 
 
-// Find the first slice of a minimum size in a list of slices
 __attribute__((unused))
-static inline __HeapMemory_Slice* __Heap_FindFreeSlice(__HeapMemory_Slice* list, U32 minSize) {
-  if (!list)
-    return null;
+static inline MemorySlice* _Heap_GetSliceHeaderPointer(void* pointer) {
+  const U32 alignedHeaderSize = _Heap_AlignSize(sizeof(MemorySlice));
 
-  for (__HeapMemory_Slice* candidate = list; candidate; candidate = candidate->NextBlock)
-    if (candidate->Size >= minSize)
-      return candidate;
-
-  return null;
+  return pointer - alignedHeaderSize;
 }
 
-
-// Remove the slice from the list and reconfigure the other pointers
-__attribute__((unused))
-static inline void __Heap_UnhingeSlice(__HeapMemory_Slice* slice) {
-  if (slice->NextBlock)
-    slice->NextBlock->PreviousBlock = slice->PreviousBlock;
-  if (slice->PreviousBlock)
-    slice->PreviousBlock->NextBlock = slice->NextBlock;
-
-  slice->NextBlock = slice->PreviousBlock = null;
-}
-
-
-// Wait until the lock is released, then set the locked flag
-__attribute__((unused))
-static inline void __Heap_Lock(__HeapMemory_Header* header) {
-  // Wait until the lock is reset
-  while(header->IsLocked)
-    ;
-  
-  header->IsLocked = true;
-}
-
-
-// Reset the locked flag
-__attribute__((unused))
-static inline void __Heap_Unlock(__HeapMemory_Header* header) {
-  header->IsLocked = false;
-}
-
-
-// Finds the folowing memory slice by its address
-__attribute__((unused))
-static inline __HeapMemory_Slice* __Heap_FindNextSlice(__HeapMemory_Slice* slice) {
-  if (!slice->NextBlock)
-    return null;
-  
-  __HeapMemory_Slice *next = slice->NextBlock;
-  for (__HeapMemory_Slice* candidate = slice; candidate; candidate = candidate->NextBlock) {
-    if (candidate <= slice)
-      continue;
-
-    void* sliceEnd = __Heap_GetHeapSliceEndPointer(slice);
-    if (candidate == sliceEnd + 1)
-      return candidate;
-
-    if (candidate < next)
-    next = candidate;
-  }
-
-  return next;
-}
 
 
 
 module(Heap) {
+  // Initialize a new dynamic memory area
+  HeapArea* (*Initialize)(void *startAddress, U32 size);
 
-  // Initializes a new dynamic memory area
-  HeapMemory (*Initialize) (void *pointer, U32 totalSize);
+  // Allocate dynamic memory
+  void* (*Allocate)(HeapArea* heap, U32 size);
 
-  // Allocates a continuous block of memory; returns a pointer or null in case of an error
-  void* (*Allocate) (HeapMemory heapArea, U32 size);
-
-  // Free a previously allocated dynamic memory area
-  void (*Free)(HeapMemory heapArea, void* pointer);
-
-  // Merge adjacent free blocks of memory
-  void (*Defrag)(HeapMemory heapArea);
-  
-  // Get the amount of free bytes in this area
-  U32 (*GetBytesFree)(HeapMemory heapArea);
-
-  // Get the amount of allocated bytes in this area
-  U32 (*GetBytesUsed)(HeapMemory heapArea);
-  
+  // Free dynamic memory
+  void (*Free)(HeapArea* heap, void* pointer);
 };
-
 
 #endif

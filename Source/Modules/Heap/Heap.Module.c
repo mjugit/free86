@@ -29,19 +29,13 @@
 
 #include "../Include/Heap.h"
 
-HeapMemory	_Heap_InitializeImplementation(void *pointer, U32 totalSize);
-void*		_Heap_AllocateImplementation(HeapMemory heapArea, U32 size);
-void		_Heap_FreeImplementation(HeapMemory heapArea, void* pointer);
-void		_Heap_DefragImplementation(HeapMemory heapArea);
-U32		_Heap_GetBytesFreeImplementation(HeapMemory heapArea);
-U32		_Heap_GetBytesUsedImplementation(HeapMemory heapArea);
+HeapArea* _Heap_InitializeImplementation(void *startAddress, U32 size);
+void* _Heap_AllocateImplementation(HeapArea* heap, U32 size);
+void _Heap_Free_Implementation(HeapArea* heap, void* pointer);
 
 
 members(Heap) {
-    .Initialize	  = _Heap_InitializeImplementation,
-    .Allocate	  = _Heap_AllocateImplementation,
-    .Free	  = _Heap_FreeImplementation,
-    .Defrag	  = _Heap_DefragImplementation,
-    .GetBytesFree = _Heap_GetBytesFreeImplementation,
-    .GetBytesUsed = _Heap_GetBytesUsedImplementation
+  .Initialize = _Heap_InitializeImplementation,
+    .Allocate = _Heap_AllocateImplementation,
+    .Free = _Heap_Free_Implementation
 };

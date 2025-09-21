@@ -30,33 +30,27 @@
 #include "../Include/Heap.h"
 
 
-HeapMemory _Heap_InitializeImplementation(void *pointer, U32 totalSize) {
-  __HeapMemory_Header* header = pointer;
+HeapArea* _Heap_InitializeImplementation(void *startAddress, U32 size) {
+  if (size < 128)
+    return null;
 
-  // Create header
-  *header =  (__HeapMemory_Header) {
-    .MemoryAreaSize = totalSize,
+  void* endAddress = startAddress + size;
+  HeapArea* heap = _Heap_AlignPointer(startAddress);
+
+  MemorySlice* initialSlice = _Heap_AlignPointer((void*)heap + sizeof(HeapArea));
+  *initialSlice = (MemorySlice) {
+    .UsableBytes = endAddress - _Heap_AlignPointer((void*)initialSlice + sizeof(MemorySlice)),
+    .NextSlice = null,
+    .PreviousSlice = null
+  };
+
+  *heap = (HeapArea) {
+    .TotalBytes = size - ((void*)heap - startAddress),
+    .TotalBytesFree = initialSlice->UsableBytes,
     .TotalBytesUsed = 0,
-    .IsLocked = false,
-    .HeapHeaderSize = sizeof(__HeapMemory_Header),
-
-    .HeapDataStart = pointer + sizeof(__HeapMemory_Header),
-    .FreeBlockList = null,
-    .UsedBlockList = null
+    .FreeSlicesList = initialSlice,
+    .UsedSlicesList = null
   };
-
-  // Create a slice covering the whole free memory area
-  __HeapMemory_Slice *slice = header->HeapDataStart;
-  *slice = (__HeapMemory_Slice) {
-    .NextBlock = null,
-    .PreviousBlock = null,
-
-    .Size = totalSize - sizeof(__HeapMemory_Header)
-  };
-
-  // Set slice as the only free block
-  header->FreeBlockList = slice;
-  header->TotalBytesFree = slice->Size;
-
-  return pointer;
+  
+  return heap;
 }
