@@ -31,7 +31,7 @@
 #include "../Modules/Include/String.h"
 #include "../Modules/Include/Stream.h"
 
-#include "../Libs/Include/Gfx.h"
+#include "../Modules/Include/Gfx.h"
 
 #include "Include/Interrupt.h"
 #include "Include/Keyboard.h"
@@ -43,6 +43,8 @@ use(Stream);
 use(Heap);
 use(String);
 use(Keyboard);
+use(GfxCore);
+use(GfxDraw);
 
 
 // These are populated by the second stage bootloader
@@ -52,9 +54,8 @@ extern U16 _Kernel_EquipmentWord;
 
 
 
-
 // Dynamic memory
-static HeapMemory _Kernel_DynMemory;
+static HeapArea* _Kernel_DynMemory;
 
 static void _InitializeHeap(void) {
   void* heapLimitBottom = (void*)0x10000;
@@ -70,17 +71,26 @@ static IdtEntry _Kernel_Idt[256];
 static IdtDescriptor _Kernel_IdtDescriptor;
 
 
+// Equipment
+static U16 _Equipment_FloppyDriveCount;
+static U16 _Equipment_RS232Count;
+static bool _Equipment_HasFpu;
+
+static void _InitializeEquipmentInfo(void) {
+  _Equipment_FloppyDriveCount = ((_Kernel_EquipmentWord >> 6) & 0x3) + 1;
+  _Equipment_RS232Count	      = (_Kernel_EquipmentWord >> 9) & 0x7;
+  _Equipment_HasFpu	      = (_Kernel_EquipmentWord >> 1) & 0x1;
+}
 
 
-/* extern void IrqKeyboard_Stub(void); */
+
 
 KeyCode keyCode = 0;
-static U16 pixelX = 0;
-static U8 extended = 0;
 static KeyModifiers  _KeyModifiers;
 static KeyEventArgs _KeyArgs;
 
 static stream inputStream;
+
 static void KeyboardHandler(void) {
   U16 scanCode = Keyboard.ReadScanCode();
   if (!scanCode)
@@ -176,56 +186,28 @@ static void _InitializeInterrupts() {
 void KernelMain() {
   _InitializeHeap();
   _InitializeInterrupts();
+  _InitializeEquipmentInfo();
 
 
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_DynMemory))
-    Gfx.Core.RefreshFromBackBuffer();
-  
+  if (GfxCore.Initialize(640, 480, 4, _Kernel_DynMemory))
+    GfxCore.Refresh();
 
-  char textBuffer[2048] = "_\0";
-  char *buffPtr = textBuffer;
 
-  U16 row = 1;
+  char textBuff[100] = { };
   
   while (1) {
-    Gfx.Draw.FilledRect(0, 0, 639, 479, 0);
-    char scanCodeText[100] = { };
-    char c;
-    if (Stream.Read(&inputStream, &c, 1)) {
-      if (c == '\b') {
-	*buffPtr = '\0';
-	if (buffPtr > textBuffer)
-	  buffPtr--;
-	*buffPtr = '\0';
-      } else {
-	*buffPtr++ = c;
-      }
+    GfxDraw.FilledRect(0, 0, 639, 479, 0);
 
-      *buffPtr = '_';
-    }
-    Gfx.Draw.String(10, 100 + (row * 8), textBuffer, 15);
-
-    
-
-    char memInfoText[100] = { };
-    String.Format(memInfoText, "Low memory    = %d bytes, (%d KiB)", _Kernel_LowMemoryInfoKiB * 1024, _Kernel_LowMemoryInfoKiB);
-    Gfx.Draw.String(10, 32, memInfoText, 8);
-    String.Format(memInfoText, "High Memory   = %d bytes, (%d KiB)", _Kernel_HighMemoryInfoKiB * 1024, _Kernel_HighMemoryInfoKiB);
-    Gfx.Draw.String(10, 40, memInfoText, 8);
-
-    char equipment[100] = { };
-    U16 floppyDriveCount = (_Kernel_EquipmentWord >> 6) & 0x03;
-    String.Format(equipment,   "Floppy Drives = %d", floppyDriveCount + 1);
-    Gfx.Draw.String(10, 56, equipment, 8);
-    U16 rs232Count = (_Kernel_EquipmentWord >> 9) & 0x07;
-    String.Format(equipment,   "RS232 Interf. = %d", rs232Count);
-    Gfx.Draw.String(10, 64, equipment, 8);
-    U16 hasFpu = (_Kernel_EquipmentWord >> 1) & 0x01;
-    String.Format(equipment,   "Has FPU       = %d", hasFpu);
-    Gfx.Draw.String(10, 72, equipment, 8);
+    GfxDraw.String(10, 10, "Hello, world!", 3, Sans);
+    GfxDraw.String(10, 20, "Hello, world!", 3, SansBold);
+    GfxDraw.String(10, 30, "Hello, world!", 3, SansItalic);
+    GfxDraw.String(10, 40, "Hello, world!", 3, Serif);
+    GfxDraw.String(10, 50, "Hello, world!", 3, SerifBold);
+    GfxDraw.String(10, 60, "Hello, world!", 3, Courier);
     
     
-    Gfx.Core.RefreshFromBackBuffer();
+    
+    GfxCore.Refresh();
     
     __asm__ __volatile__("hlt");
   }

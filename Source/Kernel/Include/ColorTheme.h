@@ -30,7 +30,7 @@
 #ifndef __COLOR_THEME_H__
 #define __COLOR_THEME_H__
 
-#include "../../Libs/Include/Gfx.h"
+#include "../../Modules/Include/Gfx.h"
 
 
 const Rgb64	RgbColorButterBright = (Rgb64) { 63, 58, 31 };
