@@ -37,6 +37,9 @@ void _Heap_Free_Implementation(HeapArea* heap, void* pointer) {
     heap->UsedSlicesList = slice->NextSlice;
   
   _Heap_UnhingeListItem(slice);
+  U32 size = _Heap_GetSliceDataEnd(slice) - (void*)slice;
+  heap->TotalBytesFree += size;
+  heap->TotalBytesUsed -= size;
   
   // Find correct insert position in FreeSlicesList
   MemorySlice* current = heap->FreeSlicesList;
@@ -76,5 +79,6 @@ void _Heap_Free_Implementation(HeapArea* heap, void* pointer) {
     if (next->NextSlice)
       next->NextSlice->PreviousSlice = slice;
   }
+
 }
 
