@@ -133,4 +133,22 @@ module(Idt) {
 
 
 
+#define PIC1_COMMAND 0x20
+#define PIC1_DATA 0x21
+#define PIC2_COMMAND 0xa0
+#define PIC2_DATA 0xa1
+#define PIC_EOI 0x20
+
+
+module(Pic) {
+  void (*Remap)(U8 masterOffset, U8 slaveOffset);
+  void (*SendEoi)(U8 irqNumber);
+  void (*SetFullMask)(U16 mask);
+  void (*SetMask)(U8 irqLine);
+  void (*ClearMask)(U8 irqLine);
+  U16 (*GetMask)(void);
+};
+
+
+
 #endif
