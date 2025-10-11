@@ -30,9 +30,7 @@
 #include "../Include/Interrupt.h"
 
 
-void _Idt_LoadImplementation(IdtEntry *idt, IdtDescriptor* descriptor) {
-  descriptor->Limit = sizeof(IdtEntry) * 256 - 1;
-  descriptor->BaseAddress = (U32)idt;
-
-  __asm__ __volatile__("lidt %0" : : "m"(*descriptor));
+void _Idt_EnableEntryImplementation(IdtEntry* idt, U8 index) {
+  // Set present bit
+  idt[index].Flags |= 0x80;
 }

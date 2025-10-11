@@ -33,6 +33,11 @@
 #include "HardwareIO.h"
 
 
+// The total amount of IDT entries
+#define IDT_SIZE 256
+
+
+
 typedef struct IdtEntry {
   U16 BaseAddressLow;
   U16 Selector;
@@ -67,7 +72,8 @@ typedef enum {
 
 
 // Encode the IDT flags field
-static inline U8 Idt_EncodeFlags(IdtGateType gateType, IdtPrivilegeLevel privilege, bool present) {
+__attribute__((always_inline, unused))
+static inline U8 _Idt_EncodeFlags(IdtGateType gateType, IdtPrivilegeLevel privilege, bool present) {
   U8 flags = 0;
 
   flags |= (gateType & 0x0f);
@@ -80,7 +86,8 @@ static inline U8 Idt_EncodeFlags(IdtGateType gateType, IdtPrivilegeLevel privile
 
 
 // Set an IDT gate
-static inline void Idt_SetGate(IdtEntry* entry, U32 baseAddress, U16 selector, U8 flags) {
+__attribute__((always_inline, unused))
+static inline void _Idt_SetGate(IdtEntry* entry, U32 baseAddress, U16 selector, U8 flags) {
   entry->BaseAddressLow	 = baseAddress & 0xffff;
   entry->Selector	 = selector;
   entry->__AlwaysZero	 = 0;
@@ -109,6 +116,20 @@ extern void Idt_Load(IdtEntry *idt, IdtDescriptor* descriptor);
 		        "popa\n"		\
 		        "iret\n"		\
 		        );
+
+
+module(Idt) {
+  void (*Initialize)(IdtEntry* idt, IdtDescriptor* descriptor);
+  void (*Load)(IdtEntry* idt, IdtDescriptor* descriptor);
+  void (*SetEntry)(IdtEntry* idt,
+		   U8 index,
+		   U32 handlerAddress,
+		   U16 selector,
+		   IdtGateType gateType,
+		   IdtPrivilegeLevel privelegeLevel);
+  void (*EnableEntry)(IdtEntry* idt, U8 index);
+  void (*DisableEntry)(IdtEntry* idt, U8 index);
+};
 
 
 

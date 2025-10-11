@@ -28,11 +28,16 @@
 
 
 #include "../Include/Interrupt.h"
+#include "../../Modules/Include/Memory.h"
 
+use(Memory);
+use(Idt);
 
-void _Idt_LoadImplementation(IdtEntry *idt, IdtDescriptor* descriptor) {
-  descriptor->Limit = sizeof(IdtEntry) * 256 - 1;
+void _Idt_InitializeImplementation(IdtEntry* idt, IdtDescriptor* descriptor) {
+  Memory.Set(idt, 0, sizeof(IdtEntry) * IDT_SIZE);
+
+  descriptor->Limit = sizeof(IdtEntry) * IDT_SIZE - 1;
   descriptor->BaseAddress = (U32)idt;
 
-  __asm__ __volatile__("lidt %0" : : "m"(*descriptor));
+  Idt.Load(idt, descriptor);
 }

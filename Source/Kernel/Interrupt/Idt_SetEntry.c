@@ -30,9 +30,14 @@
 #include "../Include/Interrupt.h"
 
 
-void _Idt_LoadImplementation(IdtEntry *idt, IdtDescriptor* descriptor) {
-  descriptor->Limit = sizeof(IdtEntry) * 256 - 1;
-  descriptor->BaseAddress = (U32)idt;
-
-  __asm__ __volatile__("lidt %0" : : "m"(*descriptor));
+void _Idt_SetEntryImplementation(
+				 IdtEntry* idt,
+				 U8 index,
+				 U32 handlerAddress,
+				 U16 selector,
+				 IdtGateType gateType,
+				 IdtPrivilegeLevel privelegeLevel
+				 ){
+  U8 flags = _Idt_EncodeFlags(gateType, privelegeLevel, true);
+  _Idt_SetGate(&idt[index], handlerAddress, selector, flags);
 }

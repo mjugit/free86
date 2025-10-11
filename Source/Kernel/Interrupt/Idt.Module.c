@@ -30,9 +30,23 @@
 #include "../Include/Interrupt.h"
 
 
-void _Idt_LoadImplementation(IdtEntry *idt, IdtDescriptor* descriptor) {
-  descriptor->Limit = sizeof(IdtEntry) * 256 - 1;
-  descriptor->BaseAddress = (U32)idt;
+extern void _Idt_InitializeImplementation(IdtEntry* idt, IdtDescriptor* descriptor);
+extern void _Idt_LoadImplementation(IdtEntry* idt, IdtDescriptor* descriptor);
+extern void _Idt_SetEntryImplementation(
+				 IdtEntry* idt,
+				 U8 index,
+				 U32 handlerAddress,
+				 U16 selector,
+				 IdtGateType gateType,
+				 IdtPrivilegeLevel privelegeLevel);
+extern void _Idt_EnableEntryImplementation(IdtEntry* idt, U8 index);
+extern void _Idt_DisableEntryImplementation(IdtEntry* idt, U8 index);
 
-  __asm__ __volatile__("lidt %0" : : "m"(*descriptor));
-}
+
+members(Idt) {
+    .Initialize = _Idt_InitializeImplementation,
+    .Load = _Idt_LoadImplementation,
+    .SetEntry = _Idt_SetEntryImplementation,
+    .EnableEntry = _Idt_EnableEntryImplementation,
+    .DisableEntry = _Idt_DisableEntryImplementation
+};
