@@ -6,3 +6,5 @@ Tools/lib
 Tools/libexec
 Tools/share
 
+
+.gdb_history
