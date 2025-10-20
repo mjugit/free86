@@ -35,10 +35,10 @@
 
 module(Equipment) {
 
-  // Get the total amount of usable bytes in the low memory area
+  // Get the total amount of usable bytes in the low memory area (in KiB)
   U16 (*GetLowMemorySize)(void);
 
-  // Get the total amount of usable bytes in the high memory area
+  // Get the total amount of usable bytes in the high memory area (in KiB)
   U16 (*GetHighMemorySize)(void);
 
   // Get the amount of installed floppy drives
