@@ -55,6 +55,9 @@ typedef struct KeyEventArgs {
 
   // Indicates whether the key was pressed or released
   bool WasKeyPress;
+
+  // Indicates whether the key event was handled
+  bool Handled;
 } KeyEventArgs;
 
 
