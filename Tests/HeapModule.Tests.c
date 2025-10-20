@@ -265,18 +265,18 @@ MU_TEST(Heap_Free__SingleAlloc__FreesAllocatedMemory) {
   HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
   mu_assert(heap, "Unable to initialize heap!");
 
+  U32 freeBytesBeforeAlloc = heap->TotalBytesFree;
+  U32 usedBytesBeforeAlloc = heap->TotalBytesUsed;
+  
   // Method to test
   void* pointer = Heap.Allocate(heap, 128);
   mu_assert(pointer, "Unable to allocate memory.");
   
-  U32 freeBytesBeforeFree = heap->TotalBytesFree;
-  U32 usedBytesBeforeFree = heap->TotalBytesUsed;
-
   Heap.Free(heap, pointer);
 
   mu_check(!heap->UsedSlicesList);
-  mu_check(freeBytesBeforeFree == heap->TotalBytesFree);
-  mu_check(usedBytesBeforeFree == heap->TotalBytesUsed);
+  mu_assert_int_eq(freeBytesBeforeAlloc, heap->TotalBytesFree);
+  mu_assert_int_eq(usedBytesBeforeAlloc, heap->TotalBytesUsed);
   mu_check(!heap->FreeSlicesList->NextSlice);
 }
 
@@ -286,22 +286,22 @@ MU_TEST(Heap_Free__MultipleAllocs__FreesAllocatedMemory) {
   HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
   mu_assert(heap, "Unable to initialize heap!");
 
+  U32 freeBytesBeforeAlloc = heap->TotalBytesFree;
+  U32 usedBytesBeforeAlloc = heap->TotalBytesUsed;
+  
   // Method to test
   void* pointer1 = Heap.Allocate(heap, 128);
   void* pointer2 = Heap.Allocate(heap, 128);
   void* pointer3 = Heap.Allocate(heap, 128);
   mu_assert(pointer1 && pointer2 && pointer3, "Unable to allocate memory.");
-  
-  U32 freeBytesBeforeFree = heap->TotalBytesFree;
-  U32 usedBytesBeforeFree = heap->TotalBytesUsed;
 
   Heap.Free(heap, pointer1);
   Heap.Free(heap, pointer2);
   Heap.Free(heap, pointer3);
 
   mu_check(!heap->UsedSlicesList);
-  mu_check(freeBytesBeforeFree == heap->TotalBytesFree);
-  mu_check(usedBytesBeforeFree == heap->TotalBytesUsed); 
+  mu_assert_int_eq(freeBytesBeforeAlloc, heap->TotalBytesFree);
+  mu_assert_int_eq(usedBytesBeforeAlloc, heap->TotalBytesUsed);
   mu_check(!heap->FreeSlicesList->NextSlice);
 }
 
