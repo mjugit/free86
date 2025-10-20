@@ -35,10 +35,11 @@ _Memory_SetImplementation:
 
 	pushl %ebp
 	movl  %esp, %ebp
+	pushl %ebx
 
 	// Load params
 	movl  8(%ebp), %edi    // Destination
-	movzbl 12(%ebp), %eax     // Value (low byte of eax)
+	movzbl 12(%ebp), %eax  // Value (low byte of eax)
 	movl 16(%ebp), %ecx    // Byte count
 
 	cld
@@ -50,7 +51,6 @@ _Memory_SetImplementation:
 	movl %ecx, %ebx
 
 	// Prepare for dword writes
-	movl %edx, %eax        // stosl uses eax
 	shrl $2, %ecx
 	rep stosl
 
@@ -59,8 +59,8 @@ _Memory_SetImplementation:
 	andl $3, %ecx
 	movb 12(%ebp), %al
 	rep stosb
-
+	
+	popl %ebx
 	popl %ebp
 	ret
 
-	
