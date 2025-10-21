@@ -42,7 +42,7 @@ module(Memory) {
   void (*Set)(void *destination, U8 value, U32 count);
 
   // Copy a block of memory with overlap protection
-  void (*Move)(void *source, const void *destination, U32 count);
+  void (*Move)(void *destination, const void *source, U32 count);
 
   // Compare two blocks of memory
   I32 (*Compare)(const void *a, const void *b, U32 count);

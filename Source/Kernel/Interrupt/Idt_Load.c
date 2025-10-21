@@ -30,7 +30,7 @@
 #include "../Include/Interrupt.h"
 
 
-void Idt_Load(IdtEntry *idt, IdtDescriptor* descriptor) {
+void _Idt_LoadImplementation(IdtEntry *idt, IdtDescriptor* descriptor) {
   descriptor->Limit = sizeof(IdtEntry) * 256 - 1;
   descriptor->BaseAddress = (U32)idt;
 

@@ -186,7 +186,13 @@ Bootloader_LoadKernel:
 	// Read sectors from disk
 
 	movb $0x02, %ah		// Function code
-	movb $32, %al		// Number of sectors to read
+
+	// THIS MIGHT ACTUAL CAUSE AN ERROR ON REAL HARDWARE
+	// Reason: We're reading more sectors than a floppy has on one track
+	// Would be better to spread the data, but this works in the emulator
+	// for now. Newer BIOSes should'nt have a problem with that.
+	
+	movb $48, %al		// Number of sectors to read
 	movb $0, %ch		// Cylinder number
 	movb $2, %cl		// Sector number
 	movb $0, %dh		// Head number

@@ -11,11 +11,30 @@ This manual is intended to help other programmers who want to participate in the
 
 ### Essentials
 - [SystemCore](./CodeDocs/SystemCore.md) The core module of the system, which provides the most important types and low-level operations.
-- [Hardware IO](./CodeDocs/HardwareIO.md) Commonly used inline kernel functions for hardware interaction.
 
-### Modules
-- [Bitmap Module](./CodeDocs/BitmapModule.md) Provides functions for editing and evaluating bitmaps.
+### General modules
+- [Bitmap module](./CodeDocs/BitmapModule.md) Provides functions for editing and evaluating bitmaps.
 - [Heap module](./CodeDocs/HeapModule.md) Provides function for creating and managing dynamic memory areas.
-- [Memory Module](./CodeDocs/MemoryModule.md) Provides functions for low level memory manipulation and evaluation.
-- [Stream Module](./CodeDocs/StreamModule.md) Provides functions and types for working with data streams.
+- [Memory module](./CodeDocs/MemoryModule.md) Provides functions for low level memory manipulation and evaluation.
+- [Stream module](./CodeDocs/StreamModule.md) Provides functions and types for working with data streams.
+- [String module](./CodeDocs/StringModule.md) Simple string operations.
 
+
+### Kernel modules
+
+#### Low-Level kernel operations
+- [Equipment](./CodeDocs/Equipment.md) Provides information about the detected hardware.
+- [Hardware IO](./CodeDocs/HardwareIO.md) Inline kernel functions for interacting with the hardware (base operations).
+- [IDT module](./CodeDocs/IdtModule.md) Management functions for the Interrupt Descriptor Table (IDT).
+- [PIC module](./CodeDocs/PicModule.md) Function module for interacting with the Programmable Interrupt Controller (PIC).
+
+
+#### Driver modules
+- [Keyboard module](#) TBD
+- [Graphics module](#) TBD
+- [Timer module](#) TBD
+
+
+
+## Other files and folders
+- All fonts in the kernel include directory have been generously provided by Damien Guard (the `Kernel/Include/Font_*.h` files). Check out [his website](https://damieng.com/), where he provides lots of cool resources.

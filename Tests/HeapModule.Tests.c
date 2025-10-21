@@ -28,39 +28,165 @@
 
 
 #include "MinUnit.h"
-
 #include "../Source/Modules/Include/Heap.h"
-
 
 use(Heap);
 
 
-// Heap setup
+// List operations
 
-MU_TEST(Heap_Initialize__Always__InitializesHeapArea) {
-  U8 testBuffer[500] = { };
+MU_TEST(Heap_UnhingeListItem__Always__RemovesItemFromList) {
+  MemorySlice previous, current, next;
+
+  previous.NextSlice = &current;
+  current.PreviousSlice = &previous;
+  current.NextSlice = &next;
+  next.PreviousSlice = &current;
 
   // Method to test
-  HeapMemory* heapPtr = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  _Heap_UnhingeListItem(&current);
 
   // Check results
-  __HeapMemory_Header* header = (__HeapMemory_Header*)heapPtr;
+  mu_check(previous.NextSlice == &next);
+  mu_check(next.PreviousSlice == &previous);
 
-  mu_check(header->MemoryAreaSize == sizeof(testBuffer));
-  mu_check(header->HeapHeaderSize == sizeof(__HeapMemory_Header));
-  mu_check(header->HeapDataStart == ((void*)testBuffer + sizeof(__HeapMemory_Header)));
-  mu_check(header->UsedBlockList == null);
-  mu_check(header->TotalBytesUsed == 0);
+  mu_check(!current.PreviousSlice && !current.NextSlice);
+}
+
+MU_TEST(Heap_InsertListItemBefore__Always__InsertsListItem) {
+  MemorySlice previous, middle, next;
+
+  previous.NextSlice = &middle;
+  middle.PreviousSlice = &previous;
+  middle.NextSlice = &next;
+  next.PreviousSlice = &middle;
+
+  MemorySlice testItem;
+
+  // Method to test
+  _Heap_InsertListItemBefore(&middle, &testItem);
+
+  // Check results
+  mu_check(previous.NextSlice == &testItem);
+  mu_check(testItem.PreviousSlice == &previous);
+  mu_check(testItem.NextSlice == &middle);
+  mu_check(middle.PreviousSlice == &testItem);
+}
+
+MU_TEST(Heap_InsertListItemAfter__Always__InsertsListItem) {
+  MemorySlice previous, middle, next;
+
+  previous.NextSlice = &middle;
+  middle.PreviousSlice = &previous;
+  middle.NextSlice = &next;
+  next.PreviousSlice = &middle;
+
+  MemorySlice testItem;
+
+  // Method to test
+  _Heap_InsertListItemAfter(&middle, &testItem);
+
+  // Check results
+  mu_check(middle.NextSlice == &testItem);
+  mu_check(testItem.PreviousSlice == &middle);
+  mu_check(testItem.NextSlice == &next);
+  mu_check(next.PreviousSlice == &testItem);
+}
+
+MU_TEST_SUITE(Heap_ListOperations) {
+  MU_RUN_TEST(Heap_UnhingeListItem__Always__RemovesItemFromList);
+  MU_RUN_TEST(Heap_InsertListItemBefore__Always__InsertsListItem);
+  MU_RUN_TEST(Heap_InsertListItemAfter__Always__InsertsListItem);
+}
+
+
+
+// Slice operations
+
+MU_TEST(Heap_SplitMemorySlice__Always__SplitsSlice) {
+  U8 testBuffer[256] = { };
+
+  MemorySlice previousSlice = {};
+  MemorySlice nextSlice = {};
   
-  mu_check(header->FreeBlockList->NextBlock == null);
-  mu_check(header->FreeBlockList->PreviousBlock == null);
-  mu_check(header->FreeBlockList->Size == (sizeof(testBuffer) - sizeof(__HeapMemory_Header)));
+  MemorySlice* initialSlice = (MemorySlice*)testBuffer;
+  *initialSlice = (MemorySlice) {
+    .UsableBytes = _Heap_AlignSize(128),
+    .NextSlice = &nextSlice,
+    .PreviousSlice = &previousSlice
+  };
 
-  mu_check(header->TotalBytesFree == header->FreeBlockList->Size);
+  previousSlice.NextSlice = initialSlice;
+  nextSlice.PreviousSlice = initialSlice;
+
+  // Method to test
+  MemorySlice* remaining = _Heap_SplitMemorySlice(initialSlice, 64);
+
+  // Verify results
+  mu_check(remaining);
+  mu_check(remaining->NextSlice == &nextSlice);
+  mu_check(remaining->PreviousSlice == &previousSlice);
+  mu_check(previousSlice.NextSlice == remaining);
+  mu_check(nextSlice.PreviousSlice == remaining);
+  
+  mu_check(initialSlice->UsableBytes == _Heap_AlignSize(64));
+  mu_check(!initialSlice->NextSlice && !initialSlice->PreviousSlice);
+}
+
+MU_TEST_SUITE(Heap_SliceOperations) {
+  MU_RUN_TEST(Heap_SplitMemorySlice__Always__SplitsSlice);
+}
+
+
+
+// Pointers
+
+MU_TEST(Heap_GetSliceHeaderPointer__Always__ReturnsHeaderPointer) {
+  U8 testBuffer[128] = { };
+  MemorySlice* slicePointer = _Heap_AlignPointer(testBuffer);
+
+  void* dataPointer = _Heap_GetSliceDataStart(slicePointer);
+  MemorySlice* headerPointer = _Heap_GetSliceHeaderPointer(dataPointer);
+
+  mu_check(slicePointer = headerPointer);
+}
+
+MU_TEST_SUITE(Heap_PointerOperations) {
+  MU_RUN_TEST(Heap_GetSliceHeaderPointer__Always__ReturnsHeaderPointer);
+}
+
+
+
+// Setup methods
+
+MU_TEST(Heap_Initialize__LessThan128Bytes__ReturnsNull) {
+  U8 testBuffer[64] = { };
+  mu_check(Heap.Initialize(testBuffer, sizeof(testBuffer)) == null);
+}
+
+MU_TEST(Heap_Initialize__EnoughSpace__ReturnsPointer) {
+  U8 testBuffer[512] = { };
+
+  // Method to test
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+
+
+  // Check results
+  mu_check(heap->TotalBytes == sizeof(testBuffer) - ((void*)heap - (void*)testBuffer));
+
+  void* endOfHeader = _Heap_AlignPointer((void*)testBuffer) + sizeof(HeapArea);
+  void* firstSliceStart = _Heap_AlignPointer(endOfHeader);
+  void* endOfSliceHeader = _Heap_AlignPointer(firstSliceStart + sizeof(MemorySlice));
+  
+  mu_check(heap->TotalBytesFree == sizeof(testBuffer) - (endOfSliceHeader - (void*)testBuffer));
+  mu_check(heap->TotalBytesUsed == 0);
+  mu_check(heap->FreeSlicesList);
+  mu_check(!heap->UsedSlicesList);
 }
 
 MU_TEST_SUITE(Heap_Initialize) {
-  MU_RUN_TEST(Heap_Initialize__Always__InitializesHeapArea);
+  MU_RUN_TEST(Heap_Initialize__LessThan128Bytes__ReturnsNull);
+  MU_RUN_TEST(Heap_Initialize__EnoughSpace__ReturnsPointer);
 }
 
 
@@ -68,380 +194,132 @@ MU_TEST_SUITE(Heap_Initialize) {
 // Memory allocation
 
 MU_TEST(Heap_Allocate__NotEnoughSpace__ReturnsNull) {
-  U8 testBuffer[100] = { };
-
-  // Setup
-  __HeapMemory_Header* header = (__HeapMemory_Header*)testBuffer;
-  header->TotalBytesFree = 10;
-
-  HeapMemory* heapPtr = (HeapMemory*)testBuffer;
+  U8 testBuffer[256] = { };
+  
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap!");
 
   // Method to test
-  void* actual = Heap.Allocate(heapPtr, header->TotalBytesFree + 100);
+  void* pointer = Heap.Allocate(heap, sizeof(testBuffer) * 2);
 
-  // Check results
-  mu_check(actual == null);
-}
-
-MU_TEST(Heap_Allocate__NoLargeEnoughSlice__ReturnsNull) {
-  U8 testBuffer[100] = { };
-
-  // Setup
-  HeapMemory *heapPtr = Heap.Initialize(testBuffer, sizeof(testBuffer));
-  __HeapMemory_Header* header = (__HeapMemory_Header*)heapPtr;
-  // Bypass bytes free check
-  header->TotalBytesFree = 1000;
-
-  // Method to test
-  void* actual = Heap.Allocate(heapPtr, 300);
-
-  // Check results
-  mu_check(actual == null);
+  // Verify results
+  mu_check(!pointer);
 }
 
 MU_TEST(Heap_Allocate__EnoughSpace__ReturnsPointer) {
-  U8 testBuffer[300] = { };
+  U8 testBuffer[256] = { };
 
-  // Setup
-  HeapMemory *heapPtr = Heap.Initialize(testBuffer, sizeof(testBuffer));
-  __HeapMemory_Header* header = (__HeapMemory_Header*)heapPtr;
-  const U32 freeSizeBeforeAlloc = header->FreeBlockList->Size;
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap!");
+  const U32 freeBytesBeforeAlloc = heap->TotalBytesFree;
+  const U32 usedBytesBeforeAlloc = heap->TotalBytesUsed;
   
   // Method to test
-  const U32 allocSize = 30;
-  void* actual = Heap.Allocate(heapPtr, allocSize);
+  const U32 size = 13;
+  void* pointer = Heap.Allocate(heap, size);
 
-  // Check results
-  mu_check(actual);
-  mu_check(header->UsedBlockList == (void*)actual - sizeof(__HeapMemory_Slice));
-  mu_check(header->UsedBlockList->Size == allocSize);
-  mu_check(header->FreeBlockList->Size == freeSizeBeforeAlloc - sizeof(__HeapMemory_Slice) - allocSize);
-  mu_check(header->TotalBytesFree == freeSizeBeforeAlloc - allocSize - sizeof(__HeapMemory_Slice));
-  mu_check(header->TotalBytesUsed == allocSize + sizeof(__HeapMemory_Slice));
+  mu_check(pointer);
+  mu_check(heap->TotalBytesFree == freeBytesBeforeAlloc - _Heap_AlignSize(size + sizeof(MemorySlice)));
+  mu_check(heap->TotalBytesUsed == usedBytesBeforeAlloc + _Heap_AlignSize(size + sizeof(MemorySlice)));
+
+  mu_check(!heap->FreeSlicesList->NextSlice);
+  mu_check(heap->UsedSlicesList);
 }
 
 MU_TEST(Heap_Allocate__MultipleAllocs__ReturnsPointers) {
-    U8 testBuffer[500] = { };
+  U8 testBuffer[1024] = { };
 
-  // Setup
-  HeapMemory *heapPtr = Heap.Initialize(testBuffer, sizeof(testBuffer));
-  __HeapMemory_Header* header = (__HeapMemory_Header*)heapPtr;
-  const U32 freeSizeBeforeAlloc = header->FreeBlockList->Size;
-  
-  // Method to test
-  const U32 firstAllocSize = 35;
-  void *firstAlloc = Heap.Allocate(heapPtr, firstAllocSize);
-  const U32 secondAllocSize = 47;
-  void *secondAlloc = Heap.Allocate(heapPtr, secondAllocSize);
-  const U32 thirdAllocSize = 51;
-  void *thirdAlloc = Heap.Allocate(heapPtr, thirdAllocSize);
-  const U32 totalAllocSize = firstAllocSize + secondAllocSize + thirdAllocSize
-    + (3 * sizeof(__HeapMemory_Slice));
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap!");
 
-  mu_assert(firstAlloc && secondAlloc && thirdAlloc, "At least one alloc failed.");
-  mu_check(header->TotalBytesUsed == totalAllocSize);
-  mu_check(header->TotalBytesFree == freeSizeBeforeAlloc - totalAllocSize);
-  mu_check(header->FreeBlockList);
+  char string1[] = "Hello, world!";
+  void* pointer1 = Heap.Allocate(heap, sizeof(string1));
+  memcpy(pointer1, string1, sizeof(string1));
 
-  mu_check(header->UsedBlockList == __Heap_GetHeapSliceStartPointer(thirdAlloc));
-  __HeapMemory_Slice* secondUsedBlock = header->UsedBlockList->NextBlock;
-  mu_check(secondUsedBlock == __Heap_GetHeapSliceStartPointer(secondAlloc));
-  __HeapMemory_Slice* thirdUsedBlock = secondUsedBlock->NextBlock;
-  mu_check(thirdUsedBlock == __Heap_GetHeapSliceStartPointer(firstAlloc));
+  char string2[] = "Another string!";
+  void* pointer2 = Heap.Allocate(heap, sizeof(string2));
+  memcpy(pointer2, string2, sizeof(string2));
+
+  char string3[] = "A third string!";
+  void* pointer3 = Heap.Allocate(heap, sizeof(string3));
+  memcpy(pointer3, string3, sizeof(string3));
+
+  mu_check(!memcmp(pointer1, string1, sizeof(string1)));
+  mu_check(!memcmp(pointer2, string2, sizeof(string2)));
+  mu_check(!memcmp(pointer3, string3, sizeof(string3)));
 }
 
 MU_TEST_SUITE(Heap_Allocate) {
   MU_RUN_TEST(Heap_Allocate__NotEnoughSpace__ReturnsNull);
-  MU_RUN_TEST(Heap_Allocate__NoLargeEnoughSlice__ReturnsNull);
   MU_RUN_TEST(Heap_Allocate__EnoughSpace__ReturnsPointer);
   MU_RUN_TEST(Heap_Allocate__MultipleAllocs__ReturnsPointers);
 }
 
 
 
-// Free allocs
+// Free
 
-MU_TEST(Heap_Free__Always_FreesAllocatedMemory) {
-  U8 testBuffer[300] = { };
+MU_TEST(Heap_Free__SingleAlloc__FreesAllocatedMemory) {
+  U8 testBuffer[512] = { };
+  
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap!");
 
-  // Setup
-  HeapMemory* heapPtr = Heap.Initialize((void*)testBuffer, 100);
-  __HeapMemory_Header* header = (__HeapMemory_Header*)heapPtr;
-  const U32 freeSizeBeforeAlloc = header->TotalBytesFree;
-  void* alloc = Heap.Allocate(heapPtr, 30);
-  mu_assert(alloc, "Alloc failed.\n");
-
+  U32 freeBytesBeforeAlloc = heap->TotalBytesFree;
+  U32 usedBytesBeforeAlloc = heap->TotalBytesUsed;
+  
   // Method to test
-  Heap.Free(heapPtr, alloc);
+  void* pointer = Heap.Allocate(heap, 128);
+  mu_assert(pointer, "Unable to allocate memory.");
+  
+  Heap.Free(heap, pointer);
 
-  // Check results
-  mu_check(header->TotalBytesFree == freeSizeBeforeAlloc - sizeof(__HeapMemory_Slice));
-  mu_check(header->TotalBytesUsed == 0);
-  mu_check(header->UsedBlockList == null);
-  mu_check(header->FreeBlockList->NextBlock);
+  mu_check(!heap->UsedSlicesList);
+  mu_assert_int_eq(freeBytesBeforeAlloc, heap->TotalBytesFree);
+  mu_assert_int_eq(usedBytesBeforeAlloc, heap->TotalBytesUsed);
+  mu_check(!heap->FreeSlicesList->NextSlice);
+}
+
+MU_TEST(Heap_Free__MultipleAllocs__FreesAllocatedMemory) {
+    U8 testBuffer[512] = { };
+  
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap!");
+
+  U32 freeBytesBeforeAlloc = heap->TotalBytesFree;
+  U32 usedBytesBeforeAlloc = heap->TotalBytesUsed;
+  
+  // Method to test
+  void* pointer1 = Heap.Allocate(heap, 128);
+  void* pointer2 = Heap.Allocate(heap, 128);
+  void* pointer3 = Heap.Allocate(heap, 128);
+  mu_assert(pointer1 && pointer2 && pointer3, "Unable to allocate memory.");
+
+  Heap.Free(heap, pointer1);
+  Heap.Free(heap, pointer2);
+  Heap.Free(heap, pointer3);
+
+  mu_check(!heap->UsedSlicesList);
+  mu_assert_int_eq(freeBytesBeforeAlloc, heap->TotalBytesFree);
+  mu_assert_int_eq(usedBytesBeforeAlloc, heap->TotalBytesUsed);
+  mu_check(!heap->FreeSlicesList->NextSlice);
 }
 
 MU_TEST_SUITE(Heap_Free) {
-  MU_RUN_TEST(Heap_Free__Always_FreesAllocatedMemory);
-}
-
-
-
-// Defrag
-
-MU_TEST(Heap_Defrag__Always__DefragsMemory) {
-  U8 testBuffer[500] = {};
-  HeapMemory* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
-  const U32 totalBytesFreeBeforeAlloc = Heap.GetBytesFree(heap);
-
-  void* first = Heap.Allocate(heap, 48);
-  void* second = Heap.Allocate(heap, 64);
-  void* third = Heap.Allocate(heap, 23);
-
-  Heap.Free(heap, first);
-  Heap.Free(heap, second);
-  Heap.Free(heap, third);
-  
-  // Method to test
-  Heap.Defrag(heap);
-  
-  // Check result
-  mu_check(Heap.GetBytesFree(heap) == totalBytesFreeBeforeAlloc);
-  __HeapMemory_Header* header = (__HeapMemory_Header*)heap;
-  mu_check(header->FreeBlockList->NextBlock == null);
-}
-
-MU_TEST_SUITE(Heap_Defrag) {
-  MU_RUN_TEST(Heap_Defrag__Always__DefragsMemory);
-}
-
-
-
-// Helper methods
-
-MU_TEST(_Heap_SplitHeapSlice__Always_SplitsSlice) {
-  U8 testBuffer[300] = { };
-
-  // Setup
-  const U32 initialSize = sizeof(testBuffer) - sizeof(__HeapMemory_Slice);
-  __HeapMemory_Slice* initialSlice = (__HeapMemory_Slice*)testBuffer;
-  *initialSlice = (__HeapMemory_Slice) {
-    .NextBlock = null,
-    .PreviousBlock = null,
-    .Size = initialSize
-  };
-
-  // Method to test
-  const U32 newSliceSize = 123;
-  __HeapMemory_Slice* newSlice = __Heap_SplitHeapSlice(initialSlice, newSliceSize);
-
-  // Check results
-  mu_check(initialSlice->Size == (initialSize - sizeof(__HeapMemory_Slice) - newSliceSize));
-  mu_check(newSlice->Size == newSliceSize);
-  mu_check(newSlice == ((void*)testBuffer +
-			(sizeof(testBuffer) - sizeof(__HeapMemory_Slice) - newSliceSize)));
-}
-
-MU_TEST(_Heap_GetHeapSliceDataPointer__Always__ReturnsPointer) {
-  U8 testBuffer[100] = { };
-
-  // Setup
-  const U32 initialSize = sizeof(testBuffer) - sizeof(__HeapMemory_Slice);
-  __HeapMemory_Slice* slice = (__HeapMemory_Slice*)testBuffer;
-  *slice = (__HeapMemory_Slice) {
-    .NextBlock = null,
-    .PreviousBlock = null,
-    .Size = initialSize
-  };
-
-  // Method to test
-  void* dataPtr = __Heap_GetHeapSliceDataPointer(slice);
-
-  // Check results
-  mu_check(dataPtr == (void*)slice + sizeof(__HeapMemory_Slice));
-}
-
-MU_TEST(_Heap_GetHeapSliceStartPointer__Always__ReturnsPointer) {
-  U8 testBuffer[100] = { };
-
-  // Setup
-  const U32 size = sizeof(testBuffer) - sizeof(__HeapMemory_Slice);
-  __HeapMemory_Slice* slice = (__HeapMemory_Slice*)testBuffer;
-  *slice = (__HeapMemory_Slice) {
-    .NextBlock = null,
-    .PreviousBlock = null,
-    .Size = size
-  };
-
-  // Method to test
-  void* startPtr = __Heap_GetHeapSliceStartPointer((void*)slice + sizeof(__HeapMemory_Slice));
-
-  // Check results
-  mu_check(startPtr == (void*)slice);
-}
-
-MU_TEST(_Heap_GetHeapSliceEndPointer__Always__ReturnsPointer) {
-  U8 testBuffer[100] = { };
-
-  // Setup
-  const U32 size = sizeof(testBuffer) - sizeof(__HeapMemory_Slice);
-  __HeapMemory_Slice* slice = (__HeapMemory_Slice*)testBuffer;
-  *slice = (__HeapMemory_Slice) {
-    .NextBlock = null,
-    .PreviousBlock = null,
-    .Size = size
-  };
-
-  // Method to test
-  void* endPtr = __Heap_GetHeapSliceEndPointer(slice);
-
-  // Check results
-  mu_check(endPtr == (void*)slice + sizeof(__HeapMemory_Slice) + size);
-}
-
-MU_TEST(_Heap_FindFreeSlice__NoSliceAvailable__ReturnsNull) {
-  const U32 numSlices = 10;
-  __HeapMemory_Slice slices[numSlices];
-
-  // Setup
-  __HeapMemory_Slice* lastSlice = null;
-  for (U32 sliceIndex = 0; sliceIndex < numSlices; sliceIndex++) {
-    slices[sliceIndex] = (__HeapMemory_Slice) {
-      .PreviousBlock = lastSlice,
-      .NextBlock = &slices[sliceIndex + 1],
-      .Size = 0
-    };
-  }
-
-  slices[numSlices - 1].NextBlock = null;
-  
-  // Method to test
-  __HeapMemory_Slice* result = __Heap_FindFreeSlice(slices, 100);
-
-  mu_check(result == null);
-}
-
-MU_TEST(_Heap_FindFreeSlice__SliceAvailable__ReturnsPointer) {
-  const U32 numSlices = 10;
-  __HeapMemory_Slice slices[numSlices];
-
-  // Setup
-  __HeapMemory_Slice* lastSlice = null;
-  for (U32 sliceIndex = 0; sliceIndex < numSlices; sliceIndex++) {
-    slices[sliceIndex] = (__HeapMemory_Slice) {
-      .PreviousBlock = lastSlice,
-      .NextBlock = &slices[sliceIndex + 1],
-      .Size = 0
-    };
-  }
-
-  slices[numSlices - 1].NextBlock = null;
-  slices[numSlices - 1].Size = 300;
-
-  // Method to test
-  __HeapMemory_Slice* result = __Heap_FindFreeSlice(slices, 100);
-
-  mu_check(result == &slices[numSlices - 1]);
-}
-
-MU_TEST(_Heap_UnhingeSlice__NoOtherSlices__ResetsPointers) {
-  __HeapMemory_Slice slice = {
-    .NextBlock = null,
-    .PreviousBlock = null,
-    .Size = 0
-  };
-
-  // Method to test
-  __Heap_UnhingeSlice(&slice);
-
-  // Should cause a access violation on failure
-
-  // Check results
-  mu_check(slice.NextBlock == null);
-  mu_check(slice.PreviousBlock == null);
-}
-
-MU_TEST(_Heap_UnhingeSlice__WithOtherSlices__ReconnectsSlices) {
-  __HeapMemory_Slice previous = {
-    .PreviousBlock = null,
-    .Size = 0
-  };
-
-  __HeapMemory_Slice next = {
-    .NextBlock = null,
-    .Size = 0
-  };
-  
-  __HeapMemory_Slice slice = {
-    .NextBlock = &next,
-    .PreviousBlock = &previous,
-    .Size = 0
-  };
-
-  next.PreviousBlock = &slice;
-  previous.NextBlock = &slice;
-  
-  // Method to test
-  __Heap_UnhingeSlice(&slice);
-
-  // Check results
-  mu_check(slice.NextBlock == null);
-  mu_check(slice.PreviousBlock == null);  
-  mu_check(previous.NextBlock == &next);
-  mu_check(next.PreviousBlock == &previous);
-}
-
-MU_TEST(_Heap_FindNextSlice_NoOtherSlices_ReturnsNull) {
-  __HeapMemory_Slice slice = {
-    .NextBlock = null
-  };
-
-  mu_check(__Heap_FindNextSlice(&slice) == null);
-}
-
-MU_TEST(_Heap_FindNextSlice_WithOtherSlices_ReturnsPointer) {
-  __HeapMemory_Slice slices[3] = { };
-
-  // Setup
-  slices[0] = (__HeapMemory_Slice){
-    .NextBlock = &slices[2]
-  };
-  slices[1] = (__HeapMemory_Slice){
-    .NextBlock = null
-  };
-  slices[2] = (__HeapMemory_Slice){
-    .NextBlock = &slices[1]
-  };
-
-  // Method to test
-  __HeapMemory_Slice* result = __Heap_FindNextSlice(&slices[0]);
-
-  // Check result
-  mu_check(result == &slices[1]);
-}
-
-MU_TEST_SUITE(_Heap_Helpers) {
-  MU_RUN_TEST(_Heap_SplitHeapSlice__Always_SplitsSlice);
-  MU_RUN_TEST(_Heap_GetHeapSliceDataPointer__Always__ReturnsPointer);
-  MU_RUN_TEST(_Heap_GetHeapSliceStartPointer__Always__ReturnsPointer);
-  MU_RUN_TEST(_Heap_GetHeapSliceEndPointer__Always__ReturnsPointer);
-  MU_RUN_TEST(_Heap_FindFreeSlice__NoSliceAvailable__ReturnsNull);
-  MU_RUN_TEST(_Heap_FindFreeSlice__SliceAvailable__ReturnsPointer);
-  MU_RUN_TEST(_Heap_UnhingeSlice__NoOtherSlices__ResetsPointers);
-  MU_RUN_TEST(_Heap_UnhingeSlice__WithOtherSlices__ReconnectsSlices);
-  MU_RUN_TEST(_Heap_FindNextSlice_NoOtherSlices_ReturnsNull);
-  MU_RUN_TEST(_Heap_FindNextSlice_WithOtherSlices_ReturnsPointer);
+  MU_RUN_TEST(Heap_Free__SingleAlloc__FreesAllocatedMemory);
+  MU_RUN_TEST(Heap_Free__MultipleAllocs__FreesAllocatedMemory);
 }
 
 
 
 int main(void) {
+  MU_RUN_SUITE(Heap_ListOperations);
+  MU_RUN_SUITE(Heap_SliceOperations);
+  MU_RUN_SUITE(Heap_PointerOperations);
+  
   MU_RUN_SUITE(Heap_Initialize);
   MU_RUN_SUITE(Heap_Allocate);
   MU_RUN_SUITE(Heap_Free);
-  MU_RUN_SUITE(Heap_Defrag);
-
-  MU_RUN_SUITE(_Heap_Helpers);
   
   MU_REPORT();
 

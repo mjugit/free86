@@ -47,7 +47,6 @@ MU_TEST(Memory_Copy__Always__CopiesSourceToDestination) {
   for (int index = 0; index < DESTINATION_SIZE; index++)
     destination[index] = 0x00;
 
-  
   // Method to test
   Memory.Copy(destination, source, SOURCE_SIZE);
 
@@ -58,7 +57,7 @@ MU_TEST(Memory_Copy__Always__CopiesSourceToDestination) {
       mu_fail("Did not copy all bytes.");
   
   for (int index = SOURCE_SIZE; index < DESTINATION_SIZE; index++)
-    if (destination[index] != 0x00)
+    if (destination[index])
       mu_fail("Copied to much.");
 }
 
@@ -70,10 +69,10 @@ MU_TEST_SUITE(Memory_Copy) {
 
 MU_TEST(Memory_Set__Always__SetsBlockOfMemoryToValue) {
   const int BLOCK_SIZE = 100;
-  const int BUFFER_SIZE = BLOCK_SIZE * 2;
+  const int BUFFER_SIZE = BLOCK_SIZE * 3;
 
   char buffer[BUFFER_SIZE];
-
+  
   // Prepare test
   for (int index = 0; index < BUFFER_SIZE; index++)
     buffer[index] = 0x00;
@@ -81,7 +80,6 @@ MU_TEST(Memory_Set__Always__SetsBlockOfMemoryToValue) {
 
   // Method to test
   Memory.Set(buffer, 0xff, BLOCK_SIZE);
-
 
   // Check results
   for (int index = 0; index < BLOCK_SIZE; index++)

@@ -41,14 +41,14 @@
 
 
 // Writes a byte to the specified I/O port
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline void PortWriteByte(U16 port, U8 value) {
     __asm__ volatile ("outb %1, %0" : : "dN" (port), "a" (value));
 }
 
 
 // Reads a byte from the specified I/O port
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline U8 PortReadByte(U16 port) {
     U8 value;
     __asm__ volatile ("inb %1, %0" : "=a" (value) : "dN" (port));
@@ -57,14 +57,14 @@ static inline U8 PortReadByte(U16 port) {
 
 
 // Writes a word to the specified I/O port
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline void PortWriteWord(U16 port, U16 value) {
     __asm__ volatile ("outw %1, %0" : : "dN" (port), "a" (value));
 }
 
 
 // Reads a word from the specified I/O port
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline U16 PortReadWord(U16 port) {
     U16 value;
     __asm__ volatile ("inw %1, %0" : "=a" (value) : "dN" (port));
@@ -73,14 +73,14 @@ static inline U16 PortReadWord(U16 port) {
 
 
 // Writes a double word to the specified I/O port
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline void PortWriteDWord(U16 port, U32 value) {
     __asm__ volatile ("outl %1, %0" : : "dN" (port), "a" (value));
 }
 
 
 // Reads a double word from the specified I/O port
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline U32 PortReadDWord(U16 port) {
     U32 value;
     __asm__ volatile ("inl %1, %0" : "=a" (value) : "dN" (port));
@@ -89,7 +89,7 @@ static inline U32 PortReadDWord(U16 port) {
 
 
 // Reads multiple bytes from an I/O port into a buffer
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline void PortReadBytes(U16 port, void *buffer, U32 count) {
     __asm__ volatile ("rep insb"
                       : "=D"(buffer), "=c"(count)
@@ -98,7 +98,7 @@ static inline void PortReadBytes(U16 port, void *buffer, U32 count) {
 
 
 // Writes multiple bytes from a buffer to an I/O port
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline void PortWriteBytes(U16 port, const void *buffer, U32 count) {
     __asm__ volatile ("rep outsb"
                       : "=S"(buffer), "=c"(count)
@@ -107,7 +107,7 @@ static inline void PortWriteBytes(U16 port, const void *buffer, U32 count) {
 
 
 // Reads multiple words from an I/O port into a buffer
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline void PortReadWords(U16 port, void *buffer, U32 count) {
     __asm__ volatile ("rep insw"
                       : "=D"(buffer), "=c"(count)
@@ -116,7 +116,7 @@ static inline void PortReadWords(U16 port, void *buffer, U32 count) {
 
 
 // Writes multiple words from a buffer to an I/O port
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline void PortWriteWords(U16 port, const void *buffer, U32 count) {
     __asm__ volatile ("rep outsw"
                       : "=S"(buffer), "=c"(count)
@@ -125,14 +125,14 @@ static inline void PortWriteWords(U16 port, const void *buffer, U32 count) {
 
 
 // Enables CPU interrupts
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline void EnableInterrupts(void) {
     __asm__ volatile ("sti");
 }
 
 
 // Disables CPU interrupts
-__attribute__((unused))
+__attribute__((always_inline, unused))
 static inline void DisableInterrupts(void) {
     __asm__ volatile ("cli");
 }

@@ -33,6 +33,13 @@
 #include "HardwareIO.h"
 
 
+// The total amount of IDT entries
+#define IDT_SIZE 256
+
+
+
+
+
 typedef struct IdtEntry {
   U16 BaseAddressLow;
   U16 Selector;
@@ -67,7 +74,8 @@ typedef enum {
 
 
 // Encode the IDT flags field
-static inline U8 Idt_EncodeFlags(IdtGateType gateType, IdtPrivilegeLevel privilege, bool present) {
+__attribute__((always_inline, unused))
+static inline U8 _Idt_EncodeFlags(IdtGateType gateType, IdtPrivilegeLevel privilege, bool present) {
   U8 flags = 0;
 
   flags |= (gateType & 0x0f);
@@ -80,18 +88,14 @@ static inline U8 Idt_EncodeFlags(IdtGateType gateType, IdtPrivilegeLevel privile
 
 
 // Set an IDT gate
-static inline void Idt_SetGate(IdtEntry* entry, U32 baseAddress, U16 selector, U8 flags) {
+__attribute__((always_inline, unused))
+static inline void _Idt_SetGate(IdtEntry* entry, U32 baseAddress, U16 selector, U8 flags) {
   entry->BaseAddressLow	 = baseAddress & 0xffff;
   entry->Selector	 = selector;
   entry->__AlwaysZero	 = 0;
   entry->Flags		 = flags;
   entry->BaseAddressHigh = (baseAddress >> 16) & 0xffff;
 }
-
-
-// Load the IDT
-extern void Idt_Load(IdtEntry *idt, IdtDescriptor* descriptor);
-
 
 
 
@@ -111,5 +115,43 @@ extern void Idt_Load(IdtEntry *idt, IdtDescriptor* descriptor);
 		        );
 
 
+module(Idt) {
+  void (*Initialize)(IdtEntry* idt, IdtDescriptor* descriptor);
+  void (*Load)(IdtEntry* idt, IdtDescriptor* descriptor);
+  void (*SetEntry)(IdtEntry* idt,
+		   U8 index,
+		   U32 handlerAddress,
+		   U16 selector,
+		   IdtGateType gateType,
+		   IdtPrivilegeLevel privelegeLevel);
+  void (*EnableEntry)(IdtEntry* idt, U8 index);
+  void (*DisableEntry)(IdtEntry* idt, U8 index);
+};
+
+
+
+#define PIC1_COMMAND 0x20
+#define PIC1_DATA 0x21
+#define PIC2_COMMAND 0xa0
+#define PIC2_DATA 0xa1
+#define PIC_EOI 0x20
+
+
+module(Pic) {
+  void (*Remap)(U8 masterOffset, U8 slaveOffset);
+  void (*SendEoi)(U8 irqNumber);
+  void (*SetFullMask)(U16 mask);
+  void (*SetMask)(U8 irqLine);
+  void (*ClearMask)(U8 irqLine);
+  U16 (*GetMask)(void);
+};
+
+
+module(Interrupt) {
+  embed(Idt, Idt);
+  embed(Pic, Pic);
+
+  void (*SetUpAll)(IdtEntry* idt, IdtDescriptor* descriptor);
+};
 
 #endif

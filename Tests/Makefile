@@ -27,7 +27,7 @@ LIBMEMORY_TESTBIN = RunLibMemoryTests
 
 
 CC = gcc
-CFLAGS = -m32 -O0 -std=gnu99
+CFLAGS = -m32 -O0 -std=gnu99 -g
 SRC = $(wildcard *.c)
 BIN = $(basename $(SRC))
 MODS = $(wildcard ../Source/Modules/Build/*/Mod*.o)

@@ -219,3 +219,41 @@ mod-stream: $(MOD_STREAM_OUTPUT)
 
 clean-mod-stream:
 	rm -fr $(MOD_STREAM_BUILD_PATH)
+
+
+
+# GFX module
+MOD_GFX_SOURCE_PATH = $(MODULES_BASE_PATH)/Gfx
+MOD_GFX_BUILD_PATH = $(MODULES_BUILD_PATH)/Gfx
+MOD_GFX_OUTPUT = $(MOD_GFX_BUILD_PATH)/ModGfx.o
+
+MOD_GFX_ASM = $(wildcard $(MOD_GFX_SOURCE_PATH)/*.s)
+MOD_GFX_C = $(wildcard $(MOD_GFX_SOURCE_PATH)/*.c)
+MOD_GFX_SOURCE = $(MOD_GFX_ASM) $(MOD_GFX_C)
+
+MOD_GFX_OBJECTS = $(patsubst $(MOD_GFX_SOURCE_PATH)/%.c, \
+                                 $(MOD_GFX_BUILD_PATH)/%.o, \
+                                 $(MOD_GFX_C)) \
+                     $(patsubst $(MOD_GFX_SOURCE_PATH)/%.s, \
+                                 $(MOD_GFX_BUILD_PATH)/%.o, \
+                                 $(MOD_GFX_ASM))
+
+$(MOD_GFX_BUILD_PATH):
+	mkdir -p $(MOD_GFX_BUILD_PATH)
+
+$(MOD_GFX_BUILD_PATH)/%.o: $(MOD_GFX_SOURCE_PATH)/%.s | $(MOD_GFX_BUILD_PATH)
+	$(AS) -o $@ $<
+
+$(MOD_GFX_BUILD_PATH)/%.o: $(MOD_GFX_SOURCE_PATH)/%.c | $(MOD_GFX_BUILD_PATH)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(MOD_GFX_OUTPUT): $(MOD_GFX_OBJECTS)
+	$(LD) -r -o $@ $^
+
+
+.PHONY: mod-gfx clean-mod-gfx
+
+mod-gfx: $(MOD_GFX_OUTPUT)
+
+clean-mod-gfx:
+	rm -fr $(MOD_GFX_BUILD_PATH)

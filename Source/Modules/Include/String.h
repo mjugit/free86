@@ -44,6 +44,8 @@ module(String) {
   void (*Reverse)(string pointer);
 
   U32 (*GetLength)(string pointer);
+
+  char* (*Search)(char* pointer, char ch, U32 count);
   
 };
 
