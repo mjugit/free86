@@ -38,6 +38,8 @@
 
 
 
+
+
 typedef struct IdtEntry {
   U16 BaseAddressLow;
   U16 Selector;
@@ -96,11 +98,6 @@ static inline void _Idt_SetGate(IdtEntry* entry, U32 baseAddress, U16 selector, 
 }
 
 
-// Load the IDT
-extern void Idt_Load(IdtEntry *idt, IdtDescriptor* descriptor);
-
-
-
 
 
 
@@ -150,5 +147,11 @@ module(Pic) {
 };
 
 
+module(Interrupt) {
+  embed(Idt, Idt);
+  embed(Pic, Pic);
+
+  void (*SetUpAll)(IdtEntry* idt, IdtDescriptor* descriptor);
+};
 
 #endif
