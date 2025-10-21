@@ -33,11 +33,12 @@
 void	_String_FormatImplementation(string destination, const string formatStr, ...);
 void	_String_ReverseImplementation(string pointer);
 U32	_String_GetLengthImplementation(string pointer);
+char* _String_SearchImplementation(char* pointer, char ch, U32 count);
 
 members(String) {
   
     .Format    = _String_FormatImplementation,
     .Reverse   = _String_ReverseImplementation,
-    .GetLength = _String_GetLengthImplementation
-    
+    .GetLength = _String_GetLengthImplementation,
+    .Search    = _String_SearchImplementation
 };

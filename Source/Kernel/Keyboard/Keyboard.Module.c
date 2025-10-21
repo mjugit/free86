@@ -30,15 +30,16 @@
 #include "../Include/Keyboard.h"
 
 
-U16	_Keyboard_ReadScanCodeImplementation(void);
-KeyCode _Keyboard_GetKeyCodeImplementation(U16 scanCode);
-char	_Keyboard_GetCharImplementation(KeyCode keyCode, KeyModifiers modifiers);
-void	_Keyboard_UpdateModifiersImplementation(KeyCode keyCode, bool keyDown, KeyModifiers *modifiersPtr);
+extern KeyCode _Keyboard_GetKeyCodeImplementation(U16 scanCode);
+extern char	_Keyboard_GetCharImplementation(KeyCode keyCode, KeyModifiers modifiers);
+extern void	_Keyboard_UpdateModifiersImplementation(KeyCode keyCode, bool keyDown, KeyModifiers *modifiersPtr);
 
+// This is the scancode buffer populated by the ISR
+extern U16 _KeyboardBuffer_Read(void);
 
 
 members(Keyboard) {
-  .ReadScanCode	   = _Keyboard_ReadScanCodeImplementation,
+  .ReadScanCode	   = _KeyboardBuffer_Read,
   .GetKeyCode	   = _Keyboard_GetKeyCodeImplementation,
   .UpdateModifiers = _Keyboard_UpdateModifiersImplementation,
   .GetChar	   = _Keyboard_GetCharImplementation

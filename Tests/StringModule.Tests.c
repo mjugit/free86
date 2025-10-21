@@ -94,7 +94,29 @@ MU_TEST(String_Format__PositiveDecimal__FormatsAsDecimal) {
 }
 
 MU_TEST_SUITE(String_Format) {
-  MU_RUN_TEST(String_Format__Decimal__FormatsIntoDecimal);
+  MU_RUN_TEST(String_Format__PositiveDecimal__FormatsAsDecimal);
+}
+
+
+MU_TEST(String_Search__Found__ReturnsPointer) {
+  char testBuffer[100];
+  strcpy(testBuffer, "Test Test");
+
+  char* actual = String.Search(testBuffer, ' ', sizeof(testBuffer));
+  mu_assert_string_eq(" Test", actual);
+}
+
+MU_TEST(String_Search__NotFound__ReturnsNull) {
+  char testBuffer[100];
+  strcpy(testBuffer, "Test Test");
+  
+  char* actual = String.Search(testBuffer, 'Q', sizeof(testBuffer));
+  mu_assert(!actual, "Pointer returned.");
+}
+
+MU_TEST_SUITE(String_Search) {
+  MU_RUN_TEST(String_Search__Found__ReturnsPointer);
+  MU_RUN_TEST(String_Search__NotFound__ReturnsNull);
 }
 
 
@@ -102,6 +124,7 @@ int main(void) {
   MU_RUN_SUITE(String_GetLength);
   MU_RUN_SUITE(String_Reverse);
   MU_RUN_SUITE(String_Format);
+  MU_RUN_SUITE(String_Search);
 
   MU_REPORT();
 

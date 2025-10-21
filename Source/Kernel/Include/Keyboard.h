@@ -40,7 +40,7 @@ typedef U8 KeyCode;
 // Describes the active key modifiers
 typedef enum {
   None = 0,
-  Shift = 1 <<0,
+  Shift = 1 << 0,
   Ctrl = 1 << 1,
   Alt = 1 << 2
 } KeyModifiers;
@@ -62,9 +62,17 @@ typedef struct KeyEventArgs {
 
 
 typedef struct KeyMapEntry {
+
+  // The character to use when no modifier is active
   char Normal;
+
+  // The character to use when Shift is pressed
   char Shift;
+
+  // The character to use when Ctrl is pressed
   char Ctrl;
+
+  // The character to use when Alt is pressed
   char Alt;
 } KeyMapEntry;
 

@@ -27,27 +27,14 @@
 */
 
 
-#ifndef __STRING_H__
-#define __STRING_H__
-
-#include <stdarg.h>
-
-#include "SystemCore.h"
-
-typedef char* string;
+#include "../Include/String.h"
 
 
-module(String) {
+char* _String_SearchImplementation(char* pointer, char ch, U32 count) {
+  for (char* ptr = pointer; *ptr && count--; ptr++) {
+    if (*ptr == ch)
+      return ptr;
+  }
 
-  void (*Format)(string destination, const string formatStr, ...);
-
-  void (*Reverse)(string pointer);
-
-  U32 (*GetLength)(string pointer);
-
-  char* (*Search)(char* pointer, char ch, U32 count);
-  
-};
-
-
-#endif
+  return null;
+}
