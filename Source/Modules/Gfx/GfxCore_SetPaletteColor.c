@@ -28,23 +28,22 @@
 
 
 #include "../Include/Gfx.h"
+#include "../../Kernel/Include/HardwareIO.h"
+
+use(GfxPorts);
 
 
-extern void _GfxDraw_PixelImplementation(U16 posX, U16 posY, U8 colorIndex);
-extern void _GfxDraw_RectImplementation(U16 posX, U16 posY, U16 width, U16 height, U8 colorIndex);
-extern void _GfxDraw_FilledRectImplementation(U16 posX, U16 posY, U16 width, U16 height, U8 colorIndex);
-extern void _GfxDraw_LineImplementation(U16 startX, U16 startY, U16 endX, U16 endY, U8 colorIndex);
-extern void _GfxDraw_CharImplementation(U16 x, U16 y, char character, U8 color, Font font);
-extern void _GfxDraw_StringImplementation(U16 x, U16 y, const char *string, U8 color, Font font);
-extern void _GfxDraw_PartialStringImplementation(U16 x, U16 y, const char *string, U32 length, U8 color, Font font);
+void _GfxCore_SetPaletteColorImplementation(U8 paletteIndex, Rgb64 color) {
+  // Limit values to 0–63
+  U8	valueRed   = (color.Red   > 63) ? 63 : color.Red;
+  U8	valueGreen = (color.Green > 63) ? 63 : color.Green;
+  U8	valueBlue  = (color.Blue  > 63) ? 63 : color.Blue;
 
+  // Select palette entry
+  PortWriteByte(GfxPorts.DacIndex, paletteIndex);
 
-members(GfxDraw) {
-    .Pixel	     = _GfxDraw_PixelImplementation,
-    .Rect	     = _GfxDraw_RectImplementation,
-    .FilledRect	     = _GfxDraw_FilledRectImplementation,
-    .Line	     = _GfxDraw_LineImplementation,
-    .Char	     = _GfxDraw_CharImplementation,
-    .String	     = _GfxDraw_StringImplementation,
-    .PartialString   = _GfxDraw_PartialStringImplementation
-};
+  // Write R, G, B components
+  PortWriteByte(GfxPorts.DacData, valueRed);
+ PortWriteByte(GfxPorts.DacData, valueGreen);
+  PortWriteByte(GfxPorts.DacData, valueBlue);
+}

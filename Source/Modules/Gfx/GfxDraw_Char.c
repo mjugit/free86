@@ -35,6 +35,8 @@
 #include "../../Kernel/Include/Font_EnviousItalic.h"
 #include "../../Kernel/Include/Font_EnviousSerif.h"
 #include "../../Kernel/Include/Font_EnviousSerifBold.h"
+#include "../../Kernel/Include/Font_Forgotten.h"
+#include "../../Kernel/Include/Font_ForgottenBold.h"
 
 
 use(Gfx);
@@ -69,10 +71,20 @@ void _GfxDraw_CharImplementation(U16 x, U16 y, char character, U8 color, Font fo
   case SerifBold:
     fontBitmap = FONT_ENVIOUS_SERIF_BOLD_BITMAP;
     break;
-    
+
+  case Handwriting:
+    fontBitmap = FONT_FORGOTTEN_BITMAP;
+    break;
+
+  case HandwritingBold:
+    fontBitmap = FONT_FORGOTTEN_BOLD_BITMAP;
+    break;
+        
   case Courier:
+  default:
     fontBitmap = FONT_ZX_COURIER_BITMAP;
     break;
+
   }
   
   const U8* bitmap = &fontBitmap[glyph * 8];

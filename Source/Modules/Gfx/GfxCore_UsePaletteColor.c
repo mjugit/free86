@@ -28,18 +28,19 @@
 
 
 #include "../Include/Gfx.h"
+#include "../../Kernel/Include/HardwareIO.h"
 
-members(GfxPorts) {
-    .SequencerIndex = 0x3c4,
-    .SequencerData  = 0x3c5,
-    .GraphicsIndex  = 0x3ce,
-    .GraphicsData   = 0x3cf,
-    .AttributeIndex = 0x3c0,
-    .AttributeData  = 0x3c1,
-    .CrtIndex	    = 0x3d4,
-    .CrtData	    = 0x3d5,
-    .DacIndex	    = 0x3c8,
-    .DacData	    = 0x3c9,
-    .VgaStatus	    = 0x3da
-};
+use(GfxPorts);
 
+void _GfxCore_UsePaletteColorImplementation(U8 colorIndex, U8 paletteIndex) {
+  // Sync VGA controller (switch to index mode)
+  PortReadByte(GfxPorts.VgaStatus);
+
+  // Redefine color mapping
+  PortWriteByte(GfxPorts.AttributeIndex, colorIndex & 0x1f);
+  PortWriteByte(GfxPorts.AttributeIndex, paletteIndex & 0xff);
+
+  // Enable video output by setting the video enable bit
+  PortReadByte(GfxPorts.VgaStatus);
+  PortWriteByte(GfxPorts.AttributeIndex, 0x20);
+}

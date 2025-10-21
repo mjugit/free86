@@ -40,7 +40,9 @@ typedef enum {
   SansItalic,
   Serif,
   SerifBold,
-  Courier
+  Courier,
+  Handwriting,
+  HandwritingBold
 } Font;
 
 typedef struct Rgb64 {
