@@ -40,6 +40,7 @@ extern void     _GenericList_ForEachImplementation(List* this, void (*callback)(
 extern void	_GenericList_ForEachImplementation(List* this, void (*callback)(void*));
 extern bool	_GenericList_AnyImplementation(List* this, bool (*test)(void*));
 extern bool	_GenericList_AllImplementation(List* this, bool (*test)(void*));
+extern void*    _GenericList_FirstImplementation(List* this, bool (*test)(void*));
 
 
 members(GenericList) {
@@ -51,7 +52,8 @@ members(GenericList) {
     .Clear    = _GenericList_ClearImplementation,
     .ForEach  = _GenericList_ForEachImplementation,
     .Any      = _GenericList_AnyImplementation,
-    .All      = _GenericList_AllImplementation
+    .All      = _GenericList_AllImplementation,
+    .First = _GenericList_FirstImplementation
 };
 
 

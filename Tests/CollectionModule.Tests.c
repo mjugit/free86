@@ -320,6 +320,235 @@ MU_TEST(GenericList_Clear__Always__ResetsListItems) {
 }
 
 
+// These are used to verify, that the callback was invoked
+
+U8 ForEachCallbackCounter;
+void ForEachDummyCallback(void* item) {
+  ForEachCallbackCounter++;
+}
+
+MU_TEST(GenericList_ForEach__ListIsNull__ReturnsImmediately) {
+  Collection.List.ForEach(null, ForEachDummyCallback);
+}
+
+MU_TEST(GenericList_ForEach__CallbackIsNull__ReturnsImmediately) {
+  U8 testBuffer[512];
+    
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  Collection.List.ForEach(list, null);
+}
+
+MU_TEST(GenericList_ForEach__ListIsEmpty__ReturnsImmediately) {
+  U8 testBuffer[512];
+    
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  Collection.List.ForEach(list, ForEachDummyCallback);
+}
+
+MU_TEST(GenericList_ForEach__ListNotEmpty__InvokesCallbackForEachItem) {
+  U8 testBuffer[512];
+
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  U16 dummy = 12345;
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  mu_assert_int_eq(4, list->Count);
+
+  ForEachCallbackCounter = 0;
+  Collection.List.ForEach(list, ForEachDummyCallback);
+
+  mu_assert_int_eq(4, ForEachCallbackCounter);
+}
+
+
+bool AnyDummyTest(void* item) {
+  U8* ptr = item;
+  return *ptr == 0xff;
+}
+
+MU_TEST(GenericList_Any__ListIsNull__ReturnsFalse) {
+  mu_check(!Collection.List.Any(null, AnyDummyTest));
+}
+
+MU_TEST(GenericList_Any__TestIsNull__ReturnsFalse) {
+  U8 testBuffer[512];
+    
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  mu_check(!Collection.List.Any(list, null));
+}
+
+MU_TEST(GenericList_Any__NoneSucceeds__ReturnsFalse) {
+  U8 testBuffer[512];
+
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  U8 dummy = 123;
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  mu_assert_int_eq(4, list->Count);
+
+  mu_check(!Collection.List.Any(list, AnyDummyTest));
+}
+
+MU_TEST(GenericList_Any__AnySucceeds__ReturnsTrue) {
+  U8 testBuffer[512];
+
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  U8 dummy = 123;
+  U8 success = 0xff;
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &success);
+  Collection.List.Add(list, &dummy);
+  mu_assert_int_eq(4, list->Count);
+
+  mu_check(Collection.List.Any(list, AnyDummyTest));
+}
+
+
+bool AllDummyTest(void* item) {
+  U8* ptr = item;
+  return *ptr == 0xff;
+}
+
+MU_TEST(GenericList_All__ListIsNull__ReturnsFalse) {
+  mu_check(!Collection.List.All(null, AllDummyTest));
+}
+
+MU_TEST(GenericList_All__TestIsNull__ReturnsFalse) {
+  U8 testBuffer[512];
+    
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  mu_check(!Collection.List.All(list, null));
+}
+
+MU_TEST(GenericList_All__NotAllSucceed__ReturnsFalse) {
+  U8 testBuffer[512];
+
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  U8 dummy = 123;
+  U8 success = 0xff;
+  Collection.List.Add(list, &success);
+  Collection.List.Add(list, &success);
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &success);
+  mu_assert_int_eq(4, list->Count);
+
+  mu_check(!Collection.List.All(list, AllDummyTest));
+}
+
+MU_TEST(GenericList_All__AllSucceed__ReturnsTrue) {
+  U8 testBuffer[512];
+
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  U8 success = 0xff;
+  Collection.List.Add(list, &success);
+  Collection.List.Add(list, &success);
+  Collection.List.Add(list, &success);
+  Collection.List.Add(list, &success);
+  mu_assert_int_eq(4, list->Count);
+
+  mu_check(Collection.List.All(list, AllDummyTest));
+}
+
+
+bool FirstDummyTest(void* item) {
+  U8* ptr = item;
+  return *ptr == 0xff;
+}
+
+MU_TEST(GenericList_First__ListIsNull__ReturnsNull) {
+  mu_check(!Collection.List.First(null, FirstDummyTest));
+}
+
+MU_TEST(GenericList_First__TestIsNull__ReturnsNull) {
+  U8 testBuffer[512];
+    
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  mu_check(!Collection.List.First(list, null));
+}
+
+MU_TEST(GenericList_First__NotFound__ReturnsNull) {
+  U8 testBuffer[512];
+
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  U8 dummy = 123;
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  mu_assert_int_eq(4, list->Count);
+
+  mu_check(!Collection.List.First(list, FirstDummyTest));
+}
+
+MU_TEST(GenericList_First__Found__ReturnsItem) {
+  U8 testBuffer[512];
+
+  HeapArea* heap = Heap.Initialize(testBuffer, sizeof(testBuffer));
+  mu_assert(heap, "Unable to initialize heap.");
+  List* list = Collection.List.Create(heap);
+  mu_assert(list, "Unable to create list.");
+
+  U8 dummy = 123;
+  U8 success = 0xff;
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &dummy);
+  Collection.List.Add(list, &success);
+  Collection.List.Add(list, &dummy);
+  mu_assert_int_eq(4, list->Count);
+
+  mu_check(Collection.List.First(list, FirstDummyTest) == &success);
+}
+
+
 
 MU_TEST_SUITE(GenericList) {
   // Create
@@ -351,6 +580,30 @@ MU_TEST_SUITE(GenericList) {
 
   // Clear
   MU_RUN_TEST(GenericList_Clear__Always__ResetsListItems);
+
+  // ForEach
+  MU_RUN_TEST(GenericList_ForEach__ListIsNull__ReturnsImmediately);
+  MU_RUN_TEST(GenericList_ForEach__CallbackIsNull__ReturnsImmediately);
+  MU_RUN_TEST(GenericList_ForEach__ListIsEmpty__ReturnsImmediately);
+  MU_RUN_TEST(GenericList_ForEach__ListNotEmpty__InvokesCallbackForEachItem);
+
+  // Any
+  MU_RUN_TEST(GenericList_Any__ListIsNull__ReturnsFalse);
+  MU_RUN_TEST(GenericList_Any__TestIsNull__ReturnsFalse);
+  MU_RUN_TEST(GenericList_Any__NoneSucceeds__ReturnsFalse);
+  MU_RUN_TEST(GenericList_Any__AnySucceeds__ReturnsTrue);
+
+  // All
+  MU_RUN_TEST(GenericList_All__ListIsNull__ReturnsFalse);
+  MU_RUN_TEST(GenericList_All__TestIsNull__ReturnsFalse);
+  MU_RUN_TEST(GenericList_All__NotAllSucceed__ReturnsFalse);
+  MU_RUN_TEST(GenericList_All__AllSucceed__ReturnsTrue);
+
+  // First
+  MU_RUN_TEST(GenericList_First__ListIsNull__ReturnsNull);
+  MU_RUN_TEST(GenericList_First__TestIsNull__ReturnsNull);
+  MU_RUN_TEST(GenericList_First__NotFound__ReturnsNull);
+  MU_RUN_TEST(GenericList_First__Found__ReturnsItem);
 }
 
 
