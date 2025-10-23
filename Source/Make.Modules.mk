@@ -257,3 +257,79 @@ mod-gfx: $(MOD_GFX_OUTPUT)
 
 clean-mod-gfx:
 	rm -fr $(MOD_GFX_BUILD_PATH)
+
+
+
+# SHELL module
+MOD_SHELL_SOURCE_PATH = $(MODULES_BASE_PATH)/Shell
+MOD_SHELL_BUILD_PATH = $(MODULES_BUILD_PATH)/Shell
+MOD_SHELL_OUTPUT = $(MOD_SHELL_BUILD_PATH)/ModShell.o
+
+MOD_SHELL_ASM = $(wildcard $(MOD_SHELL_SOURCE_PATH)/*.s)
+MOD_SHELL_C = $(wildcard $(MOD_SHELL_SOURCE_PATH)/*.c)
+MOD_SHELL_SOURCE = $(MOD_SHELL_ASM) $(MOD_SHELL_C)
+
+MOD_SHELL_OBJECTS = $(patsubst $(MOD_SHELL_SOURCE_PATH)/%.c, \
+                                 $(MOD_SHELL_BUILD_PATH)/%.o, \
+                                 $(MOD_SHELL_C)) \
+                     $(patsubst $(MOD_SHELL_SOURCE_PATH)/%.s, \
+                                 $(MOD_SHELL_BUILD_PATH)/%.o, \
+                                 $(MOD_SHELL_ASM))
+
+$(MOD_SHELL_BUILD_PATH):
+	mkdir -p $(MOD_SHELL_BUILD_PATH)
+
+$(MOD_SHELL_BUILD_PATH)/%.o: $(MOD_SHELL_SOURCE_PATH)/%.s | $(MOD_SHELL_BUILD_PATH)
+	$(AS) -o $@ $<
+
+$(MOD_SHELL_BUILD_PATH)/%.o: $(MOD_SHELL_SOURCE_PATH)/%.c | $(MOD_SHELL_BUILD_PATH)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(MOD_SHELL_OUTPUT): $(MOD_SHELL_OBJECTS)
+	$(LD) -r -o $@ $^
+
+
+.PHONY: mod-shell clean-mod-shell
+
+mod-shell: $(MOD_SHELL_OUTPUT)
+
+clean-mod-shell:
+	rm -fr $(MOD_SHELL_BUILD_PATH)
+
+
+
+# COLLECTION module
+MOD_COLLECTION_SOURCE_PATH = $(MODULES_BASE_PATH)/Collection
+MOD_COLLECTION_BUILD_PATH = $(MODULES_BUILD_PATH)/Collection
+MOD_COLLECTION_OUTPUT = $(MOD_COLLECTION_BUILD_PATH)/ModCollection.o
+
+MOD_COLLECTION_ASM = $(wildcard $(MOD_COLLECTION_SOURCE_PATH)/*.s)
+MOD_COLLECTION_C = $(wildcard $(MOD_COLLECTION_SOURCE_PATH)/*.c)
+MOD_COLLECTION_SOURCE = $(MOD_COLLECTION_ASM) $(MOD_COLLECTION_C)
+
+MOD_COLLECTION_OBJECTS = $(patsubst $(MOD_COLLECTION_SOURCE_PATH)/%.c, \
+                                 $(MOD_COLLECTION_BUILD_PATH)/%.o, \
+                                 $(MOD_COLLECTION_C)) \
+                     $(patsubst $(MOD_COLLECTION_SOURCE_PATH)/%.s, \
+                                 $(MOD_COLLECTION_BUILD_PATH)/%.o, \
+                                 $(MOD_COLLECTION_ASM))
+
+$(MOD_COLLECTION_BUILD_PATH):
+	mkdir -p $(MOD_COLLECTION_BUILD_PATH)
+
+$(MOD_COLLECTION_BUILD_PATH)/%.o: $(MOD_COLLECTION_SOURCE_PATH)/%.s | $(MOD_COLLECTION_BUILD_PATH)
+	$(AS) -o $@ $<
+
+$(MOD_COLLECTION_BUILD_PATH)/%.o: $(MOD_COLLECTION_SOURCE_PATH)/%.c | $(MOD_COLLECTION_BUILD_PATH)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(MOD_COLLECTION_OUTPUT): $(MOD_COLLECTION_OBJECTS)
+	$(LD) -r -o $@ $^
+
+
+.PHONY: mod-collection clean-mod-collection
+
+mod-collection: $(MOD_COLLECTION_OUTPUT)
+
+clean-mod-collection:
+	rm -fr $(MOD_COLLECTION_BUILD_PATH)
