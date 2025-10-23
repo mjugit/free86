@@ -101,20 +101,6 @@ static inline void _Idt_SetGate(IdtEntry* entry, U32 baseAddress, U16 selector, 
 
 
 
-// Invoke pusha
-#define PUSHA	__asm__ __volatile__("pusha\n");
-
-
-// Send end of interrupt to PIC
-#define EOI			        \
-  __asm__ __volatile__(			        \
-		        "movb $0x20, %al\n"	\
-		        "outb %al, $0x20\n"	\
-		        "popa\n"		\
-		        "iret\n"		\
-		        );
-
-
 module(Idt) {
   void (*Initialize)(IdtEntry* idt, IdtDescriptor* descriptor);
   void (*Load)(IdtEntry* idt, IdtDescriptor* descriptor);
