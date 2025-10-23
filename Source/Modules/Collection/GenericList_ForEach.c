@@ -27,53 +27,13 @@
 */
 
 
-#ifndef __COLLECTION_H__
-#define __COLLECTION_H__
-
-#include "SystemCore.h"
-#include "Heap.h"
+#include "../Include/Collection.h"
 
 
-typedef struct ListItem ListItem;
+void _GenericList_ForEachImplementation(List* this, void (*callback)(void*)) {
+  if (!this || !callback)
+    return;
 
-struct ListItem {
-  void *Payload;
-
-  ListItem* Next;
-  ListItem* Previous;
-};
-
-
-
-typedef struct List List;
-
-struct List {
-  HeapArea* Heap;
-  
-  ListItem* Head;
-  ListItem* Tail;
-
-  U32 Count;
-};
-
-
-
-module(GenericList) {
-  List* (*Create)(HeapArea* heap);
-  void (*Dispose)(List* this);
-  void (*Add)(List* this, void* payload);
-  bool (*Remove)(List* this, void* payload);
-  bool (*Contains)(List* this, void* payload);
-  void (*Clear)(List* this);
-  void (*ForEach)(List* this, void (*callback)(void*));
-  bool (*Any)(List* this, bool (*test)(void*));
-  bool (*All)(List* this, bool (*test)(void*));
-};
-
-
-module(Collection) {
-  embed(GenericList, List);
-};
-
-
-#endif
+  for (ListItem* item = this->Head; item; item = item->Next)
+    callback(item);
+}
