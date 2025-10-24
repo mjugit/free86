@@ -43,3 +43,6 @@ CC = $(TOOLS_DIRECTORY_PATH)/bin/i386-elf-gcc
 # Default C compiler flags
 CFLAGS = -ffreestanding -O2 -Wall -Wextra -std=gnu99
 
+# Use this version to enable debug symbols
+# CFLAGS = -ffreestanding -O2 -Wall -Wextra -std=gnu99 -g
+

@@ -27,26 +27,32 @@
 */
 
 
-#include "../Include/Keyboard.h"
-#include "../Include/HardwareIO.h"
+#include "../Include/Collection.h"
+
+use(Heap);
 
 
-static U8 _LastScanCode = 0;
+bool _GenericList_RemoveImplementation(List* this, void* payload) {
+  if (!this)
+    return false;
 
-
-U16 _Keyboard_ReadScanCodeImplementation(void) {
-  U8 portValue = PortReadByte(0x60);
-
-  if (portValue == 0xe0) {
-    _LastScanCode = portValue;
-    return 0;
+  ListItem* item = null;
+  for (ListItem* ptr = this->Tail; ptr; ptr = ptr->Previous) {
+    if (ptr->Payload == payload) {
+      item = ptr;
+      break;
+    }
   }
 
-  if (_LastScanCode == 0xe0) {
-    _LastScanCode = 0;
-    return 0xe000 | portValue;
-  }
+  if (!item)
+    return false;
 
-  _LastScanCode = portValue;
-  return portValue;
+  if (item->Previous)
+    item->Previous->Next = item->Next;
+  if (item->Next)
+    item->Next->Previous = item->Previous;
+
+  this->Count--;
+  
+  return true;
 }

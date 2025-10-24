@@ -19,15 +19,27 @@ The system is tested on a vintage PC (1990) with the following specs:
 
 ## Getting Started
 
-At the moment the system's booting from floppy. To build the kickstart image, you first need to compile the custom toolchain, which is a gcc and binutils build for 32-bit x86 processors. 
+To build the bootable floppy (kickstart image), you first need to compile the custom toolchain.  
+A Makefile in the `Tools` directory automates this process. Increasing the number of parallel build jobs can drastically reduce the time needed to build the toolchain, so I highly recommend it. The GNU toolchain is not particularly small, and this tiny tweak can mean a difference between a cigarette break and a leisurely dinner. However, it is not strictly necessary.
 
-A Makefile in the `Tools` directory automates this process. Increasing the number of parallel build jobs (config file is `Tools/build-config.mk`) can reduce build time, but the default configuration should work on any system.
+```makefile
+# File: Tools/Makefile
+
+# Configure the amount of parallel jobs here
+export MAKEFLAGS += -j4
+
+# For example:
+# export MAKEFLAGS += -j12
+```
+
+To start building, fire up a terminal, switch to the `Tools` directory and run `make`.
 
 ```bash
 cd Tools
 make
 ```
 
+This will take a while, so feel free to grab a coffee.
 After the toolchain is built, you can create and run the floppy image with QEMU from within the Source directory.
 
 ```bash
@@ -36,9 +48,10 @@ make run-qemu
 ```
 
 ## Documentation
-
-If you want to tinker with system yourself, it is strongly recommended to look into the [handbook](./Docs/Manual/README.md).
+If you want to tinker with system yourself, I strongly recommended you give the [handbook](./Docs/Manual/README.md) a try. It's not always 100% complete, but I do my best to keep it up to date. 
 
 
 ## Contributors
-- Special thanks to **Damien Guard** who generously allowed me to use some of his handmade bitmap fonts. Check out [his website](https://damieng.com), where he provides lots of cool resources.
+- Special thanks to Damien Guard who generously allowed me to use some of his handmade bitmap fonts. Check out [his website](https://damieng.com/), where he provides lots of cool resources.
+- David Siñuela Pastor and the other contributors of the [MinUnit](https://github.com/siu/minunit) project, a simple C unit testing framework in a single header file.
+
