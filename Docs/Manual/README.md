@@ -19,6 +19,7 @@ This manual is intended to help other programmers who want to participate in the
 
 ### General modules
 - [Bitmap module](./CodeDocs/BitmapModule.md) Provides functions for editing and evaluating bitmaps.
+- [Collection module](./CodeDocs/CollectionModule.md) A generic interface that can be used to create, traverse, and modify sets of objects without having to handle the underlying memory management manually.
 - [Heap module](./CodeDocs/HeapModule.md) Provides function for creating and managing dynamic memory areas.
 - [Memory module](./CodeDocs/MemoryModule.md) Provides functions for low level memory manipulation and evaluation.
 - [Stream module](./CodeDocs/StreamModule.md) Provides functions and types for working with data streams.
