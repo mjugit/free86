@@ -27,17 +27,11 @@
 */
 
 #include "../Modules/Include/Heap.h"
-#include "../Modules/Include/Bitmap.h"
 #include "../Modules/Include/String.h"
 #include "../Modules/Include/Stream.h"
-
 #include "../Modules/Include/Gfx.h"
-#include "../Modules/Include/Shell.h"
-
-#include "Include/Equipment.h"
 #include "Include/Interrupt.h"
 #include "Include/Keyboard.h"
-#include "Include/ColorTheme.h"
 
 
 use(Keyboard);
@@ -46,6 +40,12 @@ use(Interrupt);
 use(Heap);
 use(Memory);
 use(Gfx);
+use(String);
+
+
+
+stream inputStream;
+stream outputStream;
 
 
 // Dynamic memory
@@ -69,7 +69,6 @@ static IdtDescriptor _Kernel_IdtDescriptor;
 KeyCode keyCode = 0;
 static KeyModifiers  _KeyModifiers;
 static KeyEventArgs _KeyArgs;
-stream inputStream;
 
 static void _ProcessKeyboardInput(void) {
   U16 scanCode = Keyboard.ReadScanCode();
@@ -95,36 +94,50 @@ static void _ProcessKeyboardInput(void) {
 
 
 
-char buff[256];
 
+#define screenSize (80 * 40)
+char screenBuffer[screenSize];
+char* screenPtr;
+
+void _HandleInput(void) {
+  U32 bytesFree = screenBuffer + sizeof(screenBuffer) - screenPtr;
+
+  if (!bytesFree) {
+    Memory.Move(screenBuffer + 80, screenBuffer, 80);
+    bytesFree = 80;
+  }
+  
+  U32 bytesRead = Stream.Read(&inputStream, screenPtr, bytesFree);
+  screenPtr += bytesRead;
+}
+
+
+char textBuffer[256] = { };
 void KernelMain() {
   _InitializeHeap();
 
   Interrupt.SetUpAll(_Kernel_Idt, &_Kernel_IdtDescriptor);
 
+  screenPtr = screenBuffer;
+  
   if (Gfx.Core.Initialize(640, 480, 4, _Kernel_DynMemory))
     Gfx.Core.Refresh();
 
-  char inputBuffer[128] = {};
-  char* cursorPtr = inputBuffer;
-  while (1) {
+  for (;;) {
+    String.Format(textBuffer, "Used  = %d\nFree  = %d\nTotal = %d",
+		  _Kernel_DynMemory->TotalBytesUsed,
+		  _Kernel_DynMemory->TotalBytesFree,
+		  _Kernel_DynMemory->TotalBytes);
     
-    Gfx.Draw.FilledRect(0, 0, 640, 480, 0);
     _ProcessKeyboardInput();
+    _HandleInput();
 
-    if (Stream.Read(&inputStream, cursorPtr, sizeof(inputBuffer))) {
-      switch (*cursorPtr++) {
-      case '\n':
-	Memory.Set(inputBuffer, 0, sizeof(inputBuffer));
-	cursorPtr = inputBuffer;
-	break;
-      }
-    }
-    
-    Gfx.Draw.String(0, 0, inputBuffer, 7, Sans);
+    Gfx.Draw.String(0, 0, textBuffer, 0x7, Courier);
+    Gfx.Draw.String(0, 30, screenBuffer, 0xf, Courier);
     Gfx.Core.Refresh();
    
     __asm__ __volatile__("hlt");
   }
 }
+
 

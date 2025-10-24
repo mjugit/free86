@@ -26,6 +26,7 @@
 	
 */
 
+
 #include "MinUnit.h"
 
 #include "../Source/Modules/Include/Collection.h"
@@ -233,7 +234,6 @@ MU_TEST(GenericList_Remove__FirstItem__ReturnsTrue) {
   mu_check(Collection.List.Remove(list, &toRemove));
   mu_assert_int_eq(3, list->Count);
 }
-
 
 
 MU_TEST(GenericList_Contains__ListIsNull__ReturnsFalse) {
@@ -547,7 +547,6 @@ MU_TEST(GenericList_First__Found__ReturnsItem) {
 
   mu_check(Collection.List.First(list, FirstDummyTest) == &success);
 }
-
 
 
 MU_TEST_SUITE(GenericList) {

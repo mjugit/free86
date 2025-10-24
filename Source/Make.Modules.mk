@@ -260,44 +260,6 @@ clean-mod-gfx:
 
 
 
-# SHELL module
-MOD_SHELL_SOURCE_PATH = $(MODULES_BASE_PATH)/Shell
-MOD_SHELL_BUILD_PATH = $(MODULES_BUILD_PATH)/Shell
-MOD_SHELL_OUTPUT = $(MOD_SHELL_BUILD_PATH)/ModShell.o
-
-MOD_SHELL_ASM = $(wildcard $(MOD_SHELL_SOURCE_PATH)/*.s)
-MOD_SHELL_C = $(wildcard $(MOD_SHELL_SOURCE_PATH)/*.c)
-MOD_SHELL_SOURCE = $(MOD_SHELL_ASM) $(MOD_SHELL_C)
-
-MOD_SHELL_OBJECTS = $(patsubst $(MOD_SHELL_SOURCE_PATH)/%.c, \
-                                 $(MOD_SHELL_BUILD_PATH)/%.o, \
-                                 $(MOD_SHELL_C)) \
-                     $(patsubst $(MOD_SHELL_SOURCE_PATH)/%.s, \
-                                 $(MOD_SHELL_BUILD_PATH)/%.o, \
-                                 $(MOD_SHELL_ASM))
-
-$(MOD_SHELL_BUILD_PATH):
-	mkdir -p $(MOD_SHELL_BUILD_PATH)
-
-$(MOD_SHELL_BUILD_PATH)/%.o: $(MOD_SHELL_SOURCE_PATH)/%.s | $(MOD_SHELL_BUILD_PATH)
-	$(AS) -o $@ $<
-
-$(MOD_SHELL_BUILD_PATH)/%.o: $(MOD_SHELL_SOURCE_PATH)/%.c | $(MOD_SHELL_BUILD_PATH)
-	$(CC) -o $@ $(CFLAGS) -c $<
-
-$(MOD_SHELL_OUTPUT): $(MOD_SHELL_OBJECTS)
-	$(LD) -r -o $@ $^
-
-
-.PHONY: mod-shell clean-mod-shell
-
-mod-shell: $(MOD_SHELL_OUTPUT)
-
-clean-mod-shell:
-	rm -fr $(MOD_SHELL_BUILD_PATH)
-
-
-
 # COLLECTION module
 MOD_COLLECTION_SOURCE_PATH = $(MODULES_BASE_PATH)/Collection
 MOD_COLLECTION_BUILD_PATH = $(MODULES_BUILD_PATH)/Collection
@@ -333,3 +295,41 @@ mod-collection: $(MOD_COLLECTION_OUTPUT)
 
 clean-mod-collection:
 	rm -fr $(MOD_COLLECTION_BUILD_PATH)
+
+
+
+# HASH module
+MOD_HASH_SOURCE_PATH = $(MODULES_BASE_PATH)/Hash
+MOD_HASH_BUILD_PATH = $(MODULES_BUILD_PATH)/Hash
+MOD_HASH_OUTPUT = $(MOD_HASH_BUILD_PATH)/ModHash.o
+
+MOD_HASH_ASM = $(wildcard $(MOD_HASH_SOURCE_PATH)/*.s)
+MOD_HASH_C = $(wildcard $(MOD_HASH_SOURCE_PATH)/*.c)
+MOD_HASH_SOURCE = $(MOD_HASH_ASM) $(MOD_HASH_C)
+
+MOD_HASH_OBJECTS = $(patsubst $(MOD_HASH_SOURCE_PATH)/%.c, \
+                                 $(MOD_HASH_BUILD_PATH)/%.o, \
+                                 $(MOD_HASH_C)) \
+                     $(patsubst $(MOD_HASH_SOURCE_PATH)/%.s, \
+                                 $(MOD_HASH_BUILD_PATH)/%.o, \
+                                 $(MOD_HASH_ASM))
+
+$(MOD_HASH_BUILD_PATH):
+	mkdir -p $(MOD_HASH_BUILD_PATH)
+
+$(MOD_HASH_BUILD_PATH)/%.o: $(MOD_HASH_SOURCE_PATH)/%.s | $(MOD_HASH_BUILD_PATH)
+	$(AS) -o $@ $<
+
+$(MOD_HASH_BUILD_PATH)/%.o: $(MOD_HASH_SOURCE_PATH)/%.c | $(MOD_HASH_BUILD_PATH)
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+$(MOD_HASH_OUTPUT): $(MOD_HASH_OBJECTS)
+	$(LD) -r -o $@ $^
+
+
+.PHONY: mod-hash clean-mod-hash
+
+mod-hash: $(MOD_HASH_OUTPUT)
+
+clean-mod-hash:
+	rm -fr $(MOD_HASH_BUILD_PATH)

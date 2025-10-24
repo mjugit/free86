@@ -53,7 +53,7 @@ members(GenericList) {
     .ForEach  = _GenericList_ForEachImplementation,
     .Any      = _GenericList_AnyImplementation,
     .All      = _GenericList_AllImplementation,
-    .First = _GenericList_FirstImplementation
+    .First    = _GenericList_FirstImplementation
 };
 
 
