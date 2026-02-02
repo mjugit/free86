@@ -32,6 +32,7 @@
 #include "../Modules/Include/Gfx.h"
 #include "Include/Interrupt.h"
 #include "Include/Keyboard.h"
+#include "Include/ColorTheme.h"
 
 
 use(Keyboard);
@@ -94,34 +95,55 @@ static void _ProcessKeyboardInput(void) {
 
 
 
+char commandBuffer[2048] = { };
+char* commandPtr = commandBuffer;
 
-#define screenSize (80 * 40)
-char screenBuffer[screenSize];
-char* screenPtr;
+
+void _ExecuteFunction(char* commandString) {
+  Gfx.Draw.FilledRect(0, 0, 640, 480, 0);
+  // Echo command
+  Gfx.Draw.String(0, 50, commandString, 1, HandwritingBold);
+
+  // Clean
+  for (U32 pos = 0; pos < sizeof(commandBuffer); pos++)
+    commandBuffer[pos] = 0;
+  commandPtr = commandBuffer;
+}
 
 void _HandleInput(void) {
-  U32 bytesFree = screenBuffer + sizeof(screenBuffer) - screenPtr;
+  while (Stream.Read(&inputStream, commandPtr, 1)) {
+    switch (*commandPtr) {
+    case '\n':
+      _ExecuteFunction(commandBuffer);
+      break;
 
-  if (!bytesFree) {
-    Memory.Move(screenBuffer + 80, screenBuffer, 80);
-    bytesFree = 80;
+    case '\b':
+      *(--commandPtr) = 0;
+      break;
+      
+    default:
+      commandPtr++;
+      break;
+    }
   }
-  
-  U32 bytesRead = Stream.Read(&inputStream, screenPtr, bytesFree);
-  screenPtr += bytesRead;
 }
+
 
 
 char textBuffer[256] = { };
 void KernelMain() {
   _InitializeHeap();
-
+  
   Interrupt.SetUpAll(_Kernel_Idt, &_Kernel_IdtDescriptor);
 
-  screenPtr = screenBuffer;
+  commandPtr = commandBuffer;
   
   if (Gfx.Core.Initialize(640, 480, 4, _Kernel_DynMemory))
     Gfx.Core.Refresh();
+
+  Gfx.Core.SetPaletteColor(1, RgbColorScarletRedNormal);
+
+  
 
   for (;;) {
     String.Format(textBuffer, "Used  = %d\nFree  = %d\nTotal = %d",
@@ -132,9 +154,10 @@ void KernelMain() {
     _ProcessKeyboardInput();
     _HandleInput();
 
+    Gfx.Draw.String(0, 30, commandBuffer, 0xf, Courier);
     Gfx.Draw.String(0, 0, textBuffer, 0x7, Courier);
-    Gfx.Draw.String(0, 30, screenBuffer, 0xf, Courier);
     Gfx.Core.Refresh();
+    
    
     __asm__ __volatile__("hlt");
   }
