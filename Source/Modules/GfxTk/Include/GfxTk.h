@@ -34,20 +34,45 @@
 #include "../../Include/SystemCore.h"
 
 
+// ----------------------------------------------------------------------
+// FUNDAMENTAL TYPES AND STRUCTURES
+// ----------------------------------------------------------------------
+
+
+// A RGB color definition
+// The allowed value range for each subcolor is 0-63 (6 bit).
+typedef struct Rgb18 {
+  U8 Red;
+  U8 Green;
+  U8 Blue;
+} Rgb18;
+
+
+// Represents 2-dimensional vector
+// This could for example be a location in a coordinate system or the size
+// of a display item.
+typedef struct Vector2d {
+  // The value of the X-dimension (e.g. horizontal position)
+  U16 X;
+  // The value of the Y-dimension (e.g. vertical position)
+  U16 Y;
+} Vector2d;
+
+
+
+// ----------------------------------------------------------------------
+// BITMAPS AND RENDERING
+// ----------------------------------------------------------------------
+
+
 // At this point, font bitmaps (8x8, unrendered) are U8 arrays.
 typedef U8 Bitmap8x8[8];
 
 
 // Represents a prerendered character bitmap
 typedef struct RenderChar {
-  // The character width.
-  // If the character was rendered proportional, this is the width minus
-  // the sourounding whitespace; otherwise it is set to 8.
-  U8 Width;
-
-  // The character height.
-  // At the moment this is the bitmap height, which is 8.
-  U8 Height;
+  // The size of the character.
+  Vector2d Size;
 
   // The character bitmap.
   // If the char was rendered proportional, this is the left aligned bitmap
@@ -57,11 +82,39 @@ typedef struct RenderChar {
 } RenderChar;
 
 
+
+// The maximum length of a font name
+#define FONT_NAME_LENGTH 40
+
+// The amount of characters in a font
+#define FONT_CHAR_COUNT 95
+
+
+// The default spacing between chars in pixels
+#define FONT_DEFAULT_CHARSPACING 1
+
+// The default spacing between lines in pixels
+#define FONT_DEFAULT_LINESPACING 1
+
+
+typedef struct Font {
+  U8 Name[FONT_NAME_LENGTH];
+  
+  U8 CharSpacing;
+  U8 LineSpacing;
+  
+  RenderChar Char[FONT_CHAR_COUNT];
+} Font;
+
+
+
 module(Renderer) {
 
   // Render a character bitmap for later use. Characters can not only be
   // rendered as monospace, but proportional, too.
-  RenderChar (*RenderCharBitmap)(Bitmap8x8 bitmap, bool monospace);
+  void (*RenderCharBitmap)(RenderChar *destination, Bitmap8x8 *bitmap, bool monospace);
+
+  void (*RenderFont)(Font* destination, Bitmap8x8 *source, const char *name, bool monospace);
   
 };
 

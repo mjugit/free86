@@ -29,18 +29,19 @@
 
 #include "Include/GfxTk.h"
 
+import(Renderer);
 
 
-static inline void _CopyBitmap8x8(Bitmap8x8 bitmap, U8* destination) {
+static inline void _CopyBitmap8x8(Bitmap8x8 *bitmap, U8* destination) {
   for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++)
-    destination[lineIndex] = bitmap[lineIndex];
+    destination[lineIndex] = (*bitmap)[lineIndex];
 }
 
 
-static inline U8 _OrBitmap8x8(Bitmap8x8 bitmap) {
+static inline U8 _OrBitmap8x8(Bitmap8x8 *bitmap) {
   U8 result = 0;
   for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++)
-    result |= bitmap[lineIndex];
+    result |= (*bitmap)[lineIndex];
 
   return result;
 }
@@ -51,7 +52,7 @@ static inline U8 _GetFreeBitsLeft(U8 input) {
   if (input & checkMask)
     return 0;
 
-  const U8 maxShifts = 8;
+  const U8 maxShifts = 7;
   U8 totalShifts = 0;
   
   while ((++totalShifts) < maxShifts) {
@@ -65,9 +66,11 @@ static inline U8 _GetFreeBitsLeft(U8 input) {
 }
 
 
-static inline void _ShiftBitmap(Bitmap8x8 bitmap, U8 width) {
-  for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++)
-    bitmap[lineIndex] <<= width;
+static inline void _ShiftBitmap(Bitmap8x8 *bitmap, U8 width) {
+  for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++) {
+    U8 line = ((U8*)bitmap)[lineIndex];
+    line <<= width;
+  }
 }
 
 
@@ -90,34 +93,48 @@ static inline U8 _GetFreeBitsRight(U8 input) {
 
 
 
-RenderChar _GfxTk_RenderCharBitmap(Bitmap8x8 bitmap, bool monospace) {
-  if (bitmap == null)
-    return (RenderChar) { };
+void _GfxTk_RenderCharBitmap(RenderChar *destination, Bitmap8x8 *bitmap, bool monospace) {
+  if (!destination || !bitmap)
+    return;
   
-  RenderChar state = {
-    .Height = sizeof(Bitmap8x8)
-  };
-
+  destination->Size.Y = sizeof(Bitmap8x8);
+  
   if (monospace) {
     // Just copy and use a fixed width
-    _CopyBitmap8x8(bitmap, state.Bitmap);
-    state.Width = 8;
-    return state;
+    _CopyBitmap8x8(bitmap, destination->Bitmap);
+    destination->Size.X = 8;
+    return;
   }
 
   // Check how much whitespace we have
   U8 bitmapSig = _OrBitmap8x8(bitmap);
-  U8 whitespaceLeft = _GetFreeBitsLeft(bitmapSig);
-  U8 whitespaceRight = _GetFreeBitsRight(bitmapSig);
+  U8 whitespaceLeft = bitmapSig ? _GetFreeBitsLeft(bitmapSig) : 0;
+  U8 whitespaceRight = bitmapSig ? _GetFreeBitsRight(bitmapSig) : 0;
 
   // Align left
-  _ShiftBitmap(bitmap, whitespaceLeft);
-  _CopyBitmap8x8(bitmap, state.Bitmap);
+  if (bitmapSig)
+    _ShiftBitmap(bitmap, whitespaceLeft);
+  _CopyBitmap8x8(bitmap, destination->Bitmap);
 
   // Set width without whitespace
-  state.Width = 8 - whitespaceLeft - whitespaceRight;
-
-  return state;
+  destination->Size.X = 8 - whitespaceLeft - whitespaceRight;
 }
 
 
+
+void _GfxTk_RenderFont(Font* destination, Bitmap8x8 *source, const char *name, bool monospace) {
+  if (!destination || !source || !name)
+    return;
+
+  for (U16 nameIndex = 0; nameIndex < FONT_NAME_LENGTH && name[nameIndex]; nameIndex++)
+    destination->Name[nameIndex] = name[nameIndex];
+
+  destination->CharSpacing = FONT_DEFAULT_CHARSPACING;
+  destination->LineSpacing = FONT_DEFAULT_LINESPACING;
+
+  for (U8 charIndex = 0; charIndex < FONT_CHAR_COUNT; charIndex++) {
+    RenderChar *nextChar = &destination->Char[charIndex];
+    Bitmap8x8 *glyph = &source[charIndex];
+    Renderer.RenderCharBitmap(nextChar, glyph, false);
+  }
+}

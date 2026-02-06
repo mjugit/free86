@@ -29,6 +29,8 @@
 
 #include "MinUnit.h"
 #include "../Include/GfxTk.h"
+#include "../Include/Font_ZXCourier.h"
+
 
 import(Renderer);
 
@@ -48,7 +50,7 @@ MU_TEST_SUITE(CModuleSetup) {
 // Font renderer
 
 MU_TEST(RenderCharBitmap__Monospace__SetsFixedDimensions) {
-  U8 charBitmap[] = {
+  Bitmap8x8 charBitmap[] = {
     0b10101010,
     0b01010101,
     0b10101010,
@@ -59,16 +61,17 @@ MU_TEST(RenderCharBitmap__Monospace__SetsFixedDimensions) {
     0b01010101
   };
   
-  RenderChar result = Renderer.RenderCharBitmap(charBitmap, true);
+  RenderChar result = { };
+  Renderer.RenderCharBitmap(&result, charBitmap, true);
 
-  mu_assert_int_eq(8, result.Height);
-  mu_assert_int_eq(8, result.Width);
+  mu_assert_int_eq(8, result.Size.Y);
+  mu_assert_int_eq(8, result.Size.X);
   for (U8 bitmapIndex = 0; bitmapIndex < sizeof(Bitmap8x8); bitmapIndex++)
-    mu_check(charBitmap[bitmapIndex] == result.Bitmap[bitmapIndex]);
+    mu_check(((U8*)charBitmap)[bitmapIndex] == result.Bitmap[bitmapIndex]);
 }
 
 MU_TEST(RenderCharBitmap__NonMonospace__SetsProportionalDimensions) {
-  U8 charBitmap[] = {
+  Bitmap8x8 charBitmap[] = {
     0b00001100,
     0b00001100,
     0b00001100,
@@ -79,19 +82,21 @@ MU_TEST(RenderCharBitmap__NonMonospace__SetsProportionalDimensions) {
     0b00011100
   };
   
-  RenderChar result = Renderer.RenderCharBitmap(charBitmap, false);
+  RenderChar result = { };
+  Renderer.RenderCharBitmap(&result, charBitmap, false);
 
-  mu_assert_int_eq(8, result.Height);
-  mu_assert_int_eq(4, result.Width);
+  mu_assert_int_eq(8, result.Size.Y);
+  mu_assert_int_eq(4, result.Size.X);
   for (U8 bitmapIndex = 0; bitmapIndex < sizeof(Bitmap8x8); bitmapIndex++)
-    mu_check(charBitmap[bitmapIndex] == result.Bitmap[bitmapIndex]);
+    mu_check(((U8*)charBitmap)[bitmapIndex] == result.Bitmap[bitmapIndex]);
 }
 
 MU_TEST(RenderCharBitmap__InvalidInput__ReturnsDefault) {
-  RenderChar result = Renderer.RenderCharBitmap(null, false);
+  RenderChar result = { };
+  Renderer.RenderCharBitmap(&result, null, false);
 
-  mu_assert_int_eq(0, result.Height);
-  mu_assert_int_eq(0, result.Width);
+  mu_assert_int_eq(0, result.Size.Y);
+  mu_assert_int_eq(0, result.Size.X);
   for (U8 bitmapIndex = 0; bitmapIndex < sizeof(Bitmap8x8); bitmapIndex++)
     mu_check(result.Bitmap[bitmapIndex] == 0);
 }
@@ -104,12 +109,44 @@ MU_TEST_SUITE(RenderCharBitmap) {
 
 
 
+MU_TEST(RenderFont__Proportional__RendersFont) {
+  Font result = { };
+  Bitmap8x8* bitmap = (Bitmap8x8*)FONT_ZX_COURIER_BITMAP;
+  const char name[] = "Name";
+
+  Renderer.RenderFont(&result, bitmap, name, false);
+
+  mu_assert_int_eq(FONT_DEFAULT_CHARSPACING, result.CharSpacing);
+  mu_assert_int_eq(FONT_DEFAULT_LINESPACING, result.LineSpacing);
+  mu_assert_string_eq(name, (char*)result.Name);
+}
+
+MU_TEST(RenderFont__Monospace__RendersFont) {
+  Font result = { };
+  Bitmap8x8* bitmap = (Bitmap8x8*)FONT_ZX_COURIER_BITMAP;
+  const char name[] = "Name";
+
+  Renderer.RenderFont(&result, bitmap, name, true);
+
+  mu_assert_int_eq(FONT_DEFAULT_CHARSPACING, result.CharSpacing);
+  mu_assert_int_eq(FONT_DEFAULT_LINESPACING, result.LineSpacing);
+  mu_assert_string_eq(name, (char*)result.Name);
+}
+
+MU_TEST_SUITE(RenderFont) {
+  MU_RUN_TEST(RenderFont__Proportional__RendersFont);
+  MU_RUN_TEST(RenderFont__Monospace__RendersFont);
+}
+
+
+
 int main(void) {
   // Verify, that the module is properly set up
   MU_RUN_SUITE(CModuleSetup);
 
   // Character bitmap renderer
   MU_RUN_SUITE(RenderCharBitmap);
+  MU_RUN_SUITE(RenderFont);
   
   MU_REPORT();
   return MU_EXIT_CODE;

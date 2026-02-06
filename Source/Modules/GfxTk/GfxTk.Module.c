@@ -28,9 +28,11 @@
 
 #include "Include/GfxTk.h"
 
-RenderChar _GfxTk_RenderCharBitmap(Bitmap8x8 bitmap, bool monospace);
+void _GfxTk_RenderCharBitmap(RenderChar *destination, Bitmap8x8 *bitmap, bool monospace);
+void _GfxTk_RenderFont(Font* destination, Bitmap8x8 *source, const char *name, bool monospace);
 
 
 members(Renderer) {
-  .RenderCharBitmap = _GfxTk_RenderCharBitmap
+    .RenderCharBitmap = _GfxTk_RenderCharBitmap,
+    .RenderFont = _GfxTk_RenderFont
 };
