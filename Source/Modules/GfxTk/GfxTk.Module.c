@@ -28,11 +28,36 @@
 
 #include "Include/GfxTk.h"
 
-void _GfxTk_RenderCharBitmap(RenderChar *destination, Bitmap8x8 *bitmap, bool monospace);
-void _GfxTk_RenderFont(Font* destination, Bitmap8x8 *source, const char *name, bool monospace);
+extern void _GfxTk_RenderCharBitmap(RenderChar *destination, Bitmap8x8 *bitmap, bool monospace);
+extern void _GfxTk_RenderFont(Font* destination, Bitmap8x8 *source, const char *name, bool monospace);
+extern void _GfxTk_RenderFilledRect(VgaConfig *config, Vector2d position, Vector2d size, U8 color);
 
 
 members(Renderer) {
     .RenderCharBitmap = _GfxTk_RenderCharBitmap,
-    .RenderFont = _GfxTk_RenderFont
+    .RenderFont = _GfxTk_RenderFont,
+    .RenderFilledRect = _GfxTk_RenderFilledRect,
+    
+};
+
+
+
+
+extern void _GfxTk_EnableOutput(void);
+extern void _GfxTk_DisableOutput(void);
+extern void _GfxTk_SetBitmask(U8 bitmask);
+extern void _GfxTk_SetPlaneMask(U8 planeMask);
+extern void _GfxTk_PauseUntilVSync(void);
+extern void _GfxTk_SetPalette(U8 index, Rgb18 color);
+extern void _GfxTk_UseColor(U8 index, U8 paletteIndex);
+
+
+members(Vga) {
+    .EnableOutput = _GfxTk_EnableOutput,
+    .DisableOutput = _GfxTk_DisableOutput,
+    .SetBitmask = _GfxTk_SetBitmask,
+    .SetPlaneMask = _GfxTk_SetPlaneMask,
+    .PauseUntilVSync = _GfxTk_PauseUntilVSync,
+    .SetPalette = _GfxTk_SetPalette,
+    .UseColor = _GfxTk_UseColor
 };

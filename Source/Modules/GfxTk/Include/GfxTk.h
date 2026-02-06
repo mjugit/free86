@@ -33,9 +33,11 @@
 #include "../../Include/CModule.h"
 #include "../../Include/SystemCore.h"
 
+#include "../../../Kernel/Include/HardwareIO.h"
+
 
 // ----------------------------------------------------------------------
-// FUNDAMENTAL TYPES AND STRUCTURES
+// FUNDAMENTALS
 // ----------------------------------------------------------------------
 
 
@@ -57,6 +59,36 @@ typedef struct Vector2d {
   // The value of the Y-dimension (e.g. vertical position)
   U16 Y;
 } Vector2d;
+
+
+
+typedef struct VgaConfig {
+  Vector2d Resolution;
+  U16 PlaneCount;
+
+  void* Backbuffer;
+  void* ScreenBuffer;
+} VgaConfig;
+
+
+
+module (Vga) {
+
+  void (*EnableOutput)(void);
+
+  void (*DisableOutput)(void);
+
+  void (*SetBitmask)(U8 bitmask);
+
+  void (*SetPlaneMask)(U8 planeMask);
+
+  void (*PauseUntilVSync)(void);
+
+  void (*SetPalette)(U8 index, Rgb18 color);
+
+  void (*UseColor)(U8 index, U8 paletteIndex);
+  
+};
 
 
 
@@ -97,12 +129,17 @@ typedef struct RenderChar {
 #define FONT_DEFAULT_LINESPACING 1
 
 
+// Represents a prerendered bitmap font
 typedef struct Font {
+  // The name of the font
   U8 Name[FONT_NAME_LENGTH];
-  
+
+  // The space between chars (pixels)
   U8 CharSpacing;
+  // The space between lines (pixels)
   U8 LineSpacing;
-  
+
+  // The glyphs
   RenderChar Char[FONT_CHAR_COUNT];
 } Font;
 
@@ -115,7 +152,11 @@ module(Renderer) {
   void (*RenderCharBitmap)(RenderChar *destination, Bitmap8x8 *bitmap, bool monospace);
 
   void (*RenderFont)(Font* destination, Bitmap8x8 *source, const char *name, bool monospace);
+
+  void (*RenderFilledRect)(VgaConfig *config, Vector2d position, Vector2d size, U8 color);
   
 };
+
+
 
 #endif

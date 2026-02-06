@@ -135,6 +135,73 @@ void _GfxTk_RenderFont(Font* destination, Bitmap8x8 *source, const char *name, b
   for (U8 charIndex = 0; charIndex < FONT_CHAR_COUNT; charIndex++) {
     RenderChar *nextChar = &destination->Char[charIndex];
     Bitmap8x8 *glyph = &source[charIndex];
-    Renderer.RenderCharBitmap(nextChar, glyph, false);
+    Renderer.RenderCharBitmap(nextChar, glyph, monospace);
   }
 }
+
+
+
+
+static inline void _FillRow(VgaConfig *config, Vector2d position, U16 width, U8 color) {
+  if (!width)
+    return;
+
+  const U16	bytesPerRow   = config->Resolution.X / 8;
+  const U32	bytesPerPlane = bytesPerRow * config->Resolution.Y;
+
+  const U16	firstByteIndex = position.X >> 3;
+  const U16	lastPixelX     = position.X + position.X - 1;
+  const U16	lastByteIndex  = lastPixelX >> 3;
+
+  const U8	maskLeft  = 0xff >> (position.X & 7);
+  const U8	maskRight = 0xff << (7 - (lastPixelX & 7));
+
+  for (U8 plane = 0; plane < config->PlaneCount; plane++) {
+    U8 *planeAddress = config->Backbuffer + (bytesPerPlane * plane);
+    U8 *rowAddress = planeAddress + (position.Y * bytesPerRow);
+    U8 fillValue = (color & (1 << plane))
+      ? 0xff
+      : 0x00;
+
+    if (firstByteIndex == lastByteIndex) {
+      U8 mask = maskLeft & maskRight;
+      if (fillValue)
+	rowAddress[firstByteIndex] |= mask;
+      else
+	rowAddress[firstByteIndex] &= ~mask;
+      continue;
+    }
+
+    if (fillValue) {
+      if (fillValue)
+	rowAddress[firstByteIndex] |= maskLeft;
+      else 
+	rowAddress[firstByteIndex] &= ~maskLeft;
+    }
+
+    for (U16 byteIndex = firstByteIndex + 1; byteIndex < lastByteIndex; byteIndex++)
+      rowAddress[byteIndex] = fillValue;
+
+    if (fillValue) {
+      if (fillValue)
+	rowAddress[firstByteIndex] |= maskRight;
+      else
+	rowAddress[firstByteIndex] &= ~maskRight;
+    }
+  }
+}
+
+void _GfxTk_RenderFilledRect(VgaConfig *config, Vector2d position, Vector2d size, U8 color) {
+  const U16 width = (position.X + size.X > config->Resolution.X)
+    ? config->Resolution.X - position.X
+    : size.X;
+
+  const U16 height = (position.Y + size.Y > config->Resolution.Y)
+    ? config->Resolution.Y - position.Y
+    : size.Y;
+
+  const U16 lastRow = position.Y + height;
+  for (U16 row = position.Y; row < lastRow; row++)
+    _FillRow(config, (Vector2d) { .X = position.X, .Y = row }, width, color);
+}
+
