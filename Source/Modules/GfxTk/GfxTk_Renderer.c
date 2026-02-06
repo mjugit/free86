@@ -1,0 +1,123 @@
+/*
+	
+  Copyright © 2026 Maximilian Jung
+
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation
+  files (the “Software”), to deal in the Software without
+  restriction, including without limitation the rights to use,
+  copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the
+  Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the
+  Software.
+
+  THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY
+  KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+  WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+  PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+  COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+  OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
+
+
+#include "Include/GfxTk.h"
+
+
+
+static inline void _CopyBitmap8x8(Bitmap8x8 bitmap, U8* destination) {
+  for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++)
+    destination[lineIndex] = bitmap[lineIndex];
+}
+
+
+static inline U8 _OrBitmap8x8(Bitmap8x8 bitmap) {
+  U8 result = 0;
+  for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++)
+    result |= bitmap[lineIndex];
+
+  return result;
+}
+
+
+static inline U8 _GetFreeBitsLeft(U8 input) {
+  const U8 checkMask = 0b10000000;
+  if (input & checkMask)
+    return 0;
+
+  const U8 maxShifts = 8;
+  U8 totalShifts = 0;
+  
+  while ((++totalShifts) < maxShifts) {
+    input <<= 1;
+
+    if (input & checkMask)
+      return totalShifts;
+  }
+  
+  return totalShifts;
+}
+
+
+static inline void _ShiftBitmap(Bitmap8x8 bitmap, U8 width) {
+  for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++)
+    bitmap[lineIndex] <<= width;
+}
+
+
+static inline U8 _GetFreeBitsRight(U8 input) {
+  if (input & 1)
+    return 0;
+
+  const U8 maxShifts = 8;
+  U8 totalShifts = 0;
+
+  while ((++totalShifts) < maxShifts) {
+    input >>= 1;
+
+    if (input & 1)
+      return totalShifts;
+  }
+
+  return totalShifts;
+}
+
+
+
+RenderChar _GfxTk_RenderCharBitmap(Bitmap8x8 bitmap, bool monospace) {
+  if (bitmap == null)
+    return (RenderChar) { };
+  
+  RenderChar state = {
+    .Height = sizeof(Bitmap8x8)
+  };
+
+  if (monospace) {
+    // Just copy and use a fixed width
+    _CopyBitmap8x8(bitmap, state.Bitmap);
+    state.Width = 8;
+    return state;
+  }
+
+  // Check how much whitespace we have
+  U8 bitmapSig = _OrBitmap8x8(bitmap);
+  U8 whitespaceLeft = _GetFreeBitsLeft(bitmapSig);
+  U8 whitespaceRight = _GetFreeBitsRight(bitmapSig);
+
+  // Align left
+  _ShiftBitmap(bitmap, whitespaceLeft);
+  _CopyBitmap8x8(bitmap, state.Bitmap);
+
+  // Set width without whitespace
+  state.Width = 8 - whitespaceLeft - whitespaceRight;
+
+  return state;
+}
+
+
