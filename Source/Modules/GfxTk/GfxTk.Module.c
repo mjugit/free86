@@ -61,6 +61,12 @@ extern void _GfxTk_RenderAsciiZ(VgaConfig *config,
 				Font *font,
 				U8 color);
 
+extern void _GfxTk_FillScreen(VgaConfig *config, U8 color);
+
+extern void _GfxTk_Refresh(VgaConfig *config);
+
+extern Bitmap8x8* _GfxTk_GetFontBitmap(FontId fontId);
+
 
 members(Renderer) {
     .RenderCharBitmap = _GfxTk_RenderCharBitmap,
@@ -69,7 +75,10 @@ members(Renderer) {
     .RenderRect = _GfxTk_RenderRect,
     .RenderChar = _GfxTk_RenderChar,
     .GetGlyph = _GfxTk_GetGlyph,
-    .RenderAsciiZ = _GfxTk_RenderAsciiZ
+    .RenderAsciiZ = _GfxTk_RenderAsciiZ,
+    .FillScreen = _GfxTk_FillScreen,
+    .Refresh = _GfxTk_Refresh,
+    .GetFontBitmap = _GfxTk_GetFontBitmap
 };
 
 

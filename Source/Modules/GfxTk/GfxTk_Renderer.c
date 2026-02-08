@@ -29,6 +29,7 @@
 
 #include "Include/GfxTk.h"
 
+import(Vga);
 import(Renderer);
 
 
@@ -316,3 +317,137 @@ void _GfxTk_RenderAsciiZ(VgaConfig *config,
     offset += nextGlyph->Size.X + font->CharSpacing;
   }
 }
+
+
+void _GfxTk_FillScreen(VgaConfig *config, U8 color) {
+  for (U16 line = 0; line < config->Resolution.Y; line++)
+    _FillRow(config, (Vector2d) { 0, line }, config->Resolution.X, color);
+}
+
+
+static void _Vram_Copy(void *dest, const void *src, U32 count) {
+  U32 dwords = count / 4;
+  U32 bytes  = count % 4;
+
+  __asm__ __volatile__ (
+			"cld\n\t" 
+			"rep movsd\n\t" 
+			: "+D"(dest), "+S"(src), "+c"(dwords)
+			:
+			: "memory"
+			);
+
+  __asm__ __volatile__ (
+			"movl %2, %%ecx\n\t"
+			"rep movsb\n\t"
+			: "+D"(dest), "+S"(src)
+			: "r"(bytes)
+			: "ecx", "memory"
+			);
+}
+
+
+void _GfxTk_Refresh(VgaConfig *config) {
+  if (!config->Backbuffer)
+    return;
+
+  U32 bytesPerPlane = (config->Resolution.X / 8) * config->Resolution.Y;
+  
+  Vga.SetBitmask(0xff);
+  Vga.PauseUntilVSync();
+
+  for (U8 plane = 0; plane < config->PlaneCount; plane++) {
+    Vga.SetPlaneMask(1 << plane);
+    U8* buffer = config->Backbuffer + (bytesPerPlane * plane);
+    _Vram_Copy(config->ScreenBuffer, buffer, bytesPerPlane);
+  }
+}
+
+
+
+
+#include "Include/Font_CompressionShort.h"
+#include "Include/Font_CompressionSquareShort.h"
+#include "Include/Font_CompressionSquareTall.h"
+#include "Include/Font_CompressionTall.h"
+#include "Include/Font_Envious.h"
+#include "Include/Font_EnviousBold.h"
+#include "Include/Font_EnviousItalic.h"
+#include "Include/Font_EnviousSerif.h"
+#include "Include/Font_EnviousSerifBold.h"
+#include "Include/Font_Forgotten.h"
+#include "Include/Font_ForgottenBold.h"
+#include "Include/Font_Pixie.h"
+#include "Include/Font_PixieBell.h"
+#include "Include/Font_PixieBellStretch.h"
+#include "Include/Font_PixieBold.h"
+#include "Include/Font_PixieDigital.h"
+#include "Include/Font_Widget.h"
+#include "Include/Font_WidgetBold.h"
+#include "Include/Font_ZXCourier.h"
+
+
+Bitmap8x8* _GfxTk_GetFontBitmap(FontId fontId) {
+  switch (fontId) {
+  case CompressionShort:
+    return (Bitmap8x8*)FONT_COMPRESSION_SHORT_BITMAP;
+
+  case CompressionSquareShort:
+    return (Bitmap8x8*)FONT_COMPRESSION_SQUARE_SHORT_BITMAP;
+
+  case CompressionSquareTall:
+    return (Bitmap8x8*)FONT_COMPRESSION_SQUARE_TALL_BITMAP;
+
+  case CompressionTall:
+    return (Bitmap8x8*)FONT_COMPRESSION_TALL_BITMAP;
+
+  case EnviousBold:
+    return (Bitmap8x8*)FONT_ENVIOUS_BOLD_BITMAP;
+
+  case Envious:
+    return (Bitmap8x8*)FONT_ENVIOUS_BITMAP;
+
+  case EnviousItalic:
+    return (Bitmap8x8*)FONT_ENVIOUS_ITALIC_BITMAP;
+
+  case EnviousSerif:
+    return (Bitmap8x8*)FONT_ENVIOUS_SERIF_BITMAP;
+    
+  case EnviousSerifBold:
+    return (Bitmap8x8*)FONT_ENVIOUS_SERIF_BOLD_BITMAP;
+
+  case Forgotten:
+    return (Bitmap8x8*)FONT_FORGOTTEN_BITMAP;
+
+  case ForgottenBold:
+    return (Bitmap8x8*)FONT_FORGOTTEN_BOLD_BITMAP;
+
+  case Pixie:
+    return (Bitmap8x8*)FONT_PIXIE_BITMAP;
+    
+  case PixieBell:
+    return (Bitmap8x8*)FONT_PIXIE_BELL_BITMAP;
+    
+  case PixieBellStretch:
+    return (Bitmap8x8*)FONT_PIXIE_BELL_STRETCH_BITMAP;
+    
+  case PixieBold:
+    return (Bitmap8x8*)FONT_PIXIE_BOLD_BITMAP;
+    
+  case PixieDigital:
+    return (Bitmap8x8*)FONT_PIXIE_DIGITAL_BITMAP;
+    
+  case Widget:
+    return (Bitmap8x8*)FONT_WIDGET_BITMAP;
+    
+  case WidgetBold:
+    return (Bitmap8x8*)FONT_WIDGET_BOLD_BITMAP;
+    
+  case ZxCourier:
+    return (Bitmap8x8*)FONT_ZX_COURIER_BITMAP;
+
+  default:
+    return null;
+  }
+}
+

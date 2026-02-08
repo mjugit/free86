@@ -97,7 +97,7 @@ module (Vga) {
   // 16 colors are used at at time. Reconfiguring them to another palette
   // color globally effects everything on the screen.
   void (*UseColor)(U8 index, U8 paletteIndex);
-  
+
 };
 
 
@@ -153,6 +153,28 @@ typedef struct Font {
   RenderChar Char[FONT_CHAR_COUNT];
 } Font;
 
+typedef enum {
+  Undefined,
+  CompressionShort,
+  CompressionSquareShort,
+  CompressionSquareTall,
+  CompressionTall,
+  Envious,
+  EnviousBold,
+  EnviousItalic,
+  EnviousSerif,
+  EnviousSerifBold,
+  Forgotten,
+  ForgottenBold,
+  Pixie,
+  PixieBell,
+  PixieBellStretch,
+  PixieBold,
+  PixieDigital,
+  Widget,
+  WidgetBold,
+  ZxCourier
+} FontId;
 
 
 module(Renderer) {
@@ -190,6 +212,9 @@ module(Renderer) {
 		     RenderChar *glyph,
 		     U8 color);
 
+  // Get a font bitmap by its id
+  Bitmap8x8* (*GetFontBitmap)(FontId fontId);
+  
   // Get the glyph of a certain ASCII character
   RenderChar* (*GetGlyph)(Font *font, char asciiChar);
 
@@ -199,6 +224,12 @@ module(Renderer) {
 		       char *text,
 		       Font *font,
 		       U8 color);
+
+  // Fill the whole screen with a color
+  void (*FillScreen)(VgaConfig *config, U8 color);
+
+  // Sync front and backbuffer
+  void (*Refresh)(VgaConfig *config);
   
 };
 
