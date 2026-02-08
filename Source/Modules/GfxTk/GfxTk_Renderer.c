@@ -32,13 +32,13 @@
 import(Renderer);
 
 
-static inline void _CopyBitmap8x8(Bitmap8x8 *bitmap, U8* destination) {
+static inline void _CopyBitmap8x8(const Bitmap8x8 *bitmap, U8* destination) {
   for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++)
     destination[lineIndex] = (*bitmap)[lineIndex];
 }
 
 
-static inline U8 _OrBitmap8x8(Bitmap8x8 *bitmap) {
+static inline U8 _OrBitmap8x8(const Bitmap8x8 *bitmap) {
   U8 result = 0;
   for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++)
     result |= (*bitmap)[lineIndex];
@@ -67,10 +67,8 @@ static inline U8 _GetFreeBitsLeft(U8 input) {
 
 
 static inline void _ShiftBitmap(Bitmap8x8 *bitmap, U8 width) {
-  for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++) {
-    U8 line = ((U8*)bitmap)[lineIndex];
-    line <<= width;
-  }
+  for (U8 lineIndex = 0; lineIndex < sizeof(Bitmap8x8); lineIndex++)
+    ((U8*)bitmap)[lineIndex] <<= width;
 }
 
 
@@ -93,7 +91,9 @@ static inline U8 _GetFreeBitsRight(U8 input) {
 
 
 
-void _GfxTk_RenderCharBitmap(RenderChar *destination, Bitmap8x8 *bitmap, bool monospace) {
+void _GfxTk_RenderCharBitmap(RenderChar *destination,
+			     Bitmap8x8 *bitmap,
+			     bool monospace) {
   if (!destination || !bitmap)
     return;
   
@@ -121,8 +121,10 @@ void _GfxTk_RenderCharBitmap(RenderChar *destination, Bitmap8x8 *bitmap, bool mo
 }
 
 
-
-void _GfxTk_RenderFont(Font* destination, Bitmap8x8 *source, const char *name, bool monospace) {
+void _GfxTk_RenderFont(Font* destination,
+		       Bitmap8x8 *source,
+		       const char *name,
+		       bool monospace) {
   if (!destination || !source || !name)
     return;
 
@@ -141,8 +143,10 @@ void _GfxTk_RenderFont(Font* destination, Bitmap8x8 *source, const char *name, b
 
 
 
-
-static inline void _FillRow(VgaConfig *config, Vector2d position, U16 width, U8 color) {
+static inline void _FillRow(VgaConfig *config,
+			    Vector2d position,
+			    U16 width,
+			    U8 color) {
   if (!width)
     return;
 
@@ -150,7 +154,7 @@ static inline void _FillRow(VgaConfig *config, Vector2d position, U16 width, U8 
   const U32	bytesPerPlane = bytesPerRow * config->Resolution.Y;
 
   const U16	firstByteIndex = position.X >> 3;
-  const U16	lastPixelX     = position.X + position.X - 1;
+  const U16	lastPixelX     = position.X + width - 1;
   const U16	lastByteIndex  = lastPixelX >> 3;
 
   const U8	maskLeft  = 0xff >> (position.X & 7);
@@ -172,36 +176,143 @@ static inline void _FillRow(VgaConfig *config, Vector2d position, U16 width, U8 
       continue;
     }
 
-    if (fillValue) {
-      if (fillValue)
-	rowAddress[firstByteIndex] |= maskLeft;
-      else 
-	rowAddress[firstByteIndex] &= ~maskLeft;
-    }
-
+    if (fillValue)
+      rowAddress[firstByteIndex] |= maskLeft;
+    else 
+      rowAddress[firstByteIndex] &= ~maskLeft;
+    
     for (U16 byteIndex = firstByteIndex + 1; byteIndex < lastByteIndex; byteIndex++)
       rowAddress[byteIndex] = fillValue;
 
-    if (fillValue) {
-      if (fillValue)
-	rowAddress[firstByteIndex] |= maskRight;
-      else
-	rowAddress[firstByteIndex] &= ~maskRight;
-    }
+    if (fillValue)
+      rowAddress[lastByteIndex] |= maskRight;
+    else
+      rowAddress[lastByteIndex] &= ~maskRight;
+    
   }
 }
 
-void _GfxTk_RenderFilledRect(VgaConfig *config, Vector2d position, Vector2d size, U8 color) {
-  const U16 width = (position.X + size.X > config->Resolution.X)
+
+static inline U16 _GetWidth(VgaConfig *config, Vector2d position, Vector2d size) {
+  return (position.X + size.X > config->Resolution.X)
     ? config->Resolution.X - position.X
     : size.X;
+}
 
-  const U16 height = (position.Y + size.Y > config->Resolution.Y)
+
+static inline U16 _GetHeight(VgaConfig *config, Vector2d position, Vector2d size) {
+  return (position.Y + size.Y > config->Resolution.Y)
     ? config->Resolution.Y - position.Y
     : size.Y;
+}
+
+
+
+void _GfxTk_RenderFilledRect(VgaConfig *config,
+			     Vector2d position,
+			     Vector2d size,
+			     U8 color) {
+  const U16 width = _GetWidth(config, position, size);
+  const U16 height = _GetHeight(config, position, size);
 
   const U16 lastRow = position.Y + height;
   for (U16 row = position.Y; row < lastRow; row++)
     _FillRow(config, (Vector2d) { .X = position.X, .Y = row }, width, color);
 }
 
+
+void _GfxTk_RenderRect(VgaConfig *config,
+		       Vector2d position,
+		       Vector2d size,
+		       U8 thickness,
+		       U8 color) {
+  if (!size.X || !size.Y)
+    return;
+
+  const U16 width = _GetWidth(config, position, size);
+  const U16 height = _GetHeight(config, position, size);
+  const U16 lastRow = position.Y + height;
+  
+  // Draw top row
+  const U16 topEnd = position.Y + thickness;
+  for (U16 row = position.Y; row < topEnd; row++)
+    _FillRow(config, (Vector2d) { .X = position.X, .Y = row }, width, color);
+
+  // Draw bottom row
+  const U16 bottomStart = position.Y + height - thickness;
+  for (U16 row = bottomStart; row < lastRow; row++)
+    _FillRow(config, (Vector2d) { .X = position.X, .Y = row }, width, color);
+
+  // Draw left border
+  const U16 borderStart = position.Y + thickness;
+  for (U16 row = borderStart; row < bottomStart; row++) {
+    _FillRow(config, (Vector2d) { .X = position.X, .Y = row}, thickness, color);
+    _FillRow(config, (Vector2d) { .X = position.X + width - thickness, .Y = row}, thickness, color);
+  }
+}
+
+
+void _GfxTk_RenderChar(VgaConfig *config,
+		       Vector2d position,
+		       RenderChar *glyph,
+		       U8 color) {
+
+  const U16	bytesPerRow   = config->Resolution.X / 8;
+  const U32	bytesPerPlane = bytesPerRow * config->Resolution.Y;
+  
+  for (U16 rowIndex = 0; rowIndex < glyph->Size.Y; rowIndex++) {
+    U8 bitmapRow = glyph->Bitmap[rowIndex];
+
+    for (U16 columnIndex = 0; columnIndex < 8; columnIndex++) {
+      if ((bitmapRow & (1<< (7 - columnIndex))) == 0)
+	continue;
+      
+      U16 positionX = position.X + columnIndex;
+      U16 positionY = position.Y + rowIndex;
+
+      if (positionX >= config->Resolution.X ||
+	  positionY >= config->Resolution.Y)
+	continue;
+
+      U8 planeMask = 1;
+      for (U8 plane = 0; plane < config->PlaneCount; plane++, planeMask <<= 1) {
+	U8 planeBit = (color & planeMask)
+	  ? 1
+	  : 0;
+
+	U32 byteOffset = (positionY * (config->Resolution.X / 8)) + (positionX / 8);
+	U8 bitmask = 0x80 >> (positionX & 7);
+
+	U8* destination = config->Backbuffer + (plane * bytesPerPlane) + byteOffset;
+	if (planeBit)
+	  *destination |= bitmask;
+	else
+	  *destination &= ~bitmask;
+      }
+      
+    }
+  }
+}
+
+
+RenderChar* _GfxTk_GetGlyph(Font *font, char asciiChar) {
+  if (!font)
+    return null;
+
+  return &font->Char[asciiChar - 32];
+}
+
+
+void _GfxTk_RenderAsciiZ(VgaConfig *config,
+			 Vector2d position,
+			 char *text,
+			 Font *font,
+			 U8 color) {
+  U16 offset = 0;
+  for (char *textPtr = text; *textPtr; textPtr++) {
+    Vector2d nextPos = {position.X + offset, position.Y };
+    RenderChar *nextGlyph = Renderer.GetGlyph(font, *textPtr);
+    Renderer.RenderChar(config, nextPos, nextGlyph, color);
+    offset += nextGlyph->Size.X + font->CharSpacing;
+  }
+}

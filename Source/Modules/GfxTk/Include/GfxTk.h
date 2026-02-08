@@ -74,18 +74,28 @@ typedef struct VgaConfig {
 
 module (Vga) {
 
+  // Enable the video output
   void (*EnableOutput)(void);
 
+  // Disable the video output
   void (*DisableOutput)(void);
 
+  // Set the mask for the next written bytes
   void (*SetBitmask)(U8 bitmask);
 
+  // Set the plane mask for the next written bytes
   void (*SetPlaneMask)(U8 planeMask);
 
+  // Idle until the next vertical sync
   void (*PauseUntilVSync)(void);
 
+  // Define a palette color (256 color definitions in parallel
+  // can be stored simultaneously)
   void (*SetPalette)(U8 index, Rgb18 color);
 
+  // Configure the DAC to use a color from the palette
+  // 16 colors are used at at time. Reconfiguring them to another palette
+  // color globally effects everything on the screen.
   void (*UseColor)(U8 index, U8 paletteIndex);
   
 };
@@ -147,13 +157,48 @@ typedef struct Font {
 
 module(Renderer) {
 
-  // Render a character bitmap for later use. Characters can not only be
-  // rendered as monospace, but proportional, too.
-  void (*RenderCharBitmap)(RenderChar *destination, Bitmap8x8 *bitmap, bool monospace);
+  // Render a character bitmap for later use. Characters can be rendered
+  // as monospace and proportional.
+  void (*RenderCharBitmap)(RenderChar *destination,
+			   Bitmap8x8 *bitmap,
+			   bool monospace);
 
-  void (*RenderFont)(Font* destination, Bitmap8x8 *source, const char *name, bool monospace);
+  // Render all characters of a bitmap font for later use. Characters can
+  // be rendered as monospace and proportional.
+  void (*RenderFont)(Font* destination,
+		     Bitmap8x8 *source,
+		     const char *name,
+		     bool monospace);
 
-  void (*RenderFilledRect)(VgaConfig *config, Vector2d position, Vector2d size, U8 color);
+  // Render a colored and filled rectangle at a specific location.
+  void (*RenderFilledRect)(VgaConfig *config,
+			   Vector2d position,
+			   Vector2d size,
+			   U8 color);
+
+  // Render a colored rectangle at a specific location. Though it is not
+  // filled out, the line thickness can be specified.
+  void (*RenderRect)(VgaConfig *config,
+		     Vector2d position,
+		     Vector2d size,
+		     U8 thickness,
+		     U8 color);
+
+  // Render a character at a specific location.
+  void (*RenderChar)(VgaConfig *config,
+		     Vector2d position,
+		     RenderChar *glyph,
+		     U8 color);
+
+  // Get the glyph of a certain ASCII character
+  RenderChar* (*GetGlyph)(Font *font, char asciiChar);
+
+  // Render a null-terminated string at a specific location.
+  void (*RenderAsciiZ)(VgaConfig *config,
+		       Vector2d position,
+		       char *text,
+		       Font *font,
+		       U8 color);
   
 };
 

@@ -28,27 +28,65 @@
 
 #include "Include/GfxTk.h"
 
-extern void _GfxTk_RenderCharBitmap(RenderChar *destination, Bitmap8x8 *bitmap, bool monospace);
-extern void _GfxTk_RenderFont(Font* destination, Bitmap8x8 *source, const char *name, bool monospace);
-extern void _GfxTk_RenderFilledRect(VgaConfig *config, Vector2d position, Vector2d size, U8 color);
+extern void _GfxTk_RenderCharBitmap(RenderChar *destination,
+				    Bitmap8x8 *bitmap,
+				    bool monospace);
+
+extern void _GfxTk_RenderFont(Font* destination,
+			      Bitmap8x8 *source,
+			      const char *name,
+			      bool monospace);
+
+extern void _GfxTk_RenderFilledRect(VgaConfig *config,
+				    Vector2d position,
+				    Vector2d size,
+				    U8 color);
+
+extern void _GfxTk_RenderRect(VgaConfig *config,
+			      Vector2d position,
+			      Vector2d size,
+			      U8 thickness,
+			      U8 color);
+
+extern void _GfxTk_RenderChar(VgaConfig *config,
+			      Vector2d position,
+			      RenderChar *glyph,
+			      U8 color);
+
+extern RenderChar* _GfxTk_GetGlyph(Font *font, char asciiChar);
+
+extern void _GfxTk_RenderAsciiZ(VgaConfig *config,
+				Vector2d position,
+				char *text,
+				Font *font,
+				U8 color);
 
 
 members(Renderer) {
     .RenderCharBitmap = _GfxTk_RenderCharBitmap,
     .RenderFont = _GfxTk_RenderFont,
     .RenderFilledRect = _GfxTk_RenderFilledRect,
-    
+    .RenderRect = _GfxTk_RenderRect,
+    .RenderChar = _GfxTk_RenderChar,
+    .GetGlyph = _GfxTk_GetGlyph,
+    .RenderAsciiZ = _GfxTk_RenderAsciiZ
 };
 
 
 
 
 extern void _GfxTk_EnableOutput(void);
+
 extern void _GfxTk_DisableOutput(void);
+
 extern void _GfxTk_SetBitmask(U8 bitmask);
+
 extern void _GfxTk_SetPlaneMask(U8 planeMask);
+
 extern void _GfxTk_PauseUntilVSync(void);
+
 extern void _GfxTk_SetPalette(U8 index, Rgb18 color);
+
 extern void _GfxTk_UseColor(U8 index, U8 paletteIndex);
 
 
