@@ -154,7 +154,7 @@ typedef struct Font {
 } Font;
 
 typedef enum {
-  Undefined,
+  Undefined = 0,
   CompressionShort,
   CompressionSquareShort,
   CompressionSquareTall,
