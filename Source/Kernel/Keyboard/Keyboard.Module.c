@@ -44,3 +44,4 @@ members(Keyboard) {
   .UpdateModifiers = _Keyboard_UpdateModifiersImplementation,
   .GetChar	   = _Keyboard_GetCharImplementation
 };
+
