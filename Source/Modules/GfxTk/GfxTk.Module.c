@@ -48,7 +48,7 @@ extern void _GfxTk_RenderRect(VgaConfig *config,
 			      U8 thickness,
 			      U8 color);
 
-extern void _GfxTk_RenderChar(VgaConfig *config,
+extern U16 _GfxTk_RenderChar(VgaConfig *config,
 			      Vector2d position,
 			      RenderChar *glyph,
 			      U8 color);
@@ -80,7 +80,6 @@ members(Renderer) {
     .Refresh = _GfxTk_Refresh,
     .GetFontBitmap = _GfxTk_GetFontBitmap
 };
-
 
 
 

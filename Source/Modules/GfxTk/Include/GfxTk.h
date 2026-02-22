@@ -207,7 +207,7 @@ module(Renderer) {
 		     U8 color);
 
   // Render a character at a specific location.
-  void (*RenderChar)(VgaConfig *config,
+  U16 (*RenderChar)(VgaConfig *config,
 		     Vector2d position,
 		     RenderChar *glyph,
 		     U8 color);

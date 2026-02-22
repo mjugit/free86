@@ -253,7 +253,7 @@ void _GfxTk_RenderRect(VgaConfig *config,
 }
 
 
-void _GfxTk_RenderChar(VgaConfig *config,
+U16 _GfxTk_RenderChar(VgaConfig *config,
 		       Vector2d position,
 		       RenderChar *glyph,
 		       U8 color) {
@@ -293,6 +293,8 @@ void _GfxTk_RenderChar(VgaConfig *config,
       
     }
   }
+
+  return glyph->Size.X;
 }
 
 
@@ -450,4 +452,3 @@ Bitmap8x8* _GfxTk_GetFontBitmap(FontId fontId) {
     return null;
   }
 }
-
