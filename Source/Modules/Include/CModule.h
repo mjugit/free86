@@ -62,4 +62,15 @@
 #define embed(name, namespace)				\
   const __c_mod_typename(name) namespace
 
+
+// ALTERNATIVES
+
+// Import a module reference from another translation unit.
+#define import(name)				\
+  extern const __c_mod_typename(name) name
+
+// Embed a module as a field within another module.
+#define submodule(name, namespace)				\
+  const __c_mod_typename(name) namespace
+
 #endif

@@ -29,10 +29,10 @@
 #include "../Modules/Include/Heap.h"
 #include "../Modules/Include/String.h"
 #include "../Modules/Include/Stream.h"
-#include "../Modules/Include/Gfx.h"
+#include "../Modules/Include/Memory.h"
 #include "Include/Interrupt.h"
 #include "Include/Keyboard.h"
-#include "Include/ColorTheme.h"
+#include "../Modules/GfxTk/Include/GfxTk.h"
 
 
 use(Keyboard);
@@ -40,16 +40,16 @@ use(Stream);
 use(Interrupt);
 use(Heap);
 use(Memory);
-use(Gfx);
 use(String);
-
-
 
 stream inputStream;
 stream outputStream;
 
 
-// Dynamic memory
+// ----------------------------------------------------------------------
+// Heap
+// ----------------------------------------------------------------------
+
 static HeapArea* _Kernel_DynMemory;
 
 static void _InitializeHeap(void) {
@@ -61,11 +61,19 @@ static void _InitializeHeap(void) {
 }
 
 
+
+// ----------------------------------------------------------------------
 // Interrupts
+// ----------------------------------------------------------------------
+
 static IdtEntry _Kernel_Idt[256];
 static IdtDescriptor _Kernel_IdtDescriptor;
 
 
+
+// ----------------------------------------------------------------------
+// Keyboard
+// ----------------------------------------------------------------------
 
 KeyCode keyCode = 0;
 static KeyModifiers  _KeyModifiers;
@@ -87,76 +95,60 @@ static void _ProcessKeyboardInput(void) {
     .Handled = false
   };
 
-  char ch = Keyboard.GetChar(keyCode, _KeyModifiers);
-  if (wasKeyDown && ch)
-    Stream.Write(&inputStream, &ch, 1);
+  Stream.Write(&inputStream, &_KeyArgs, sizeof(KeyEventArgs));
 }
 
 
 
-
-char commandBuffer[2048] = { };
-char* commandPtr = commandBuffer;
-
-
-void _ExecuteFunction(char* commandString) {
-  Gfx.Draw.FilledRect(0, 0, 640, 480, 0);
-  // Echo command
-  Gfx.Draw.String(0, 50, commandString, 1, HandwritingBold);
-
-  // Clean
-  for (U32 pos = 0; pos < sizeof(commandBuffer); pos++)
-    commandBuffer[pos] = 0;
-  commandPtr = commandBuffer;
-}
+extern void KShell_NotifyKeyPress(KeyEventArgs eventArgs);
 
 void _HandleInput(void) {
-  while (Stream.Read(&inputStream, commandPtr, 1)) {
-    switch (*commandPtr) {
-    case '\n':
-      _ExecuteFunction(commandBuffer);
-      break;
+  KeyEventArgs keyArgs = { };
 
-    case '\b':
-      *(--commandPtr) = 0;
-      break;
-      
-    default:
-      commandPtr++;
-      break;
-    }
+  while (Stream.Read(&inputStream, &keyArgs, sizeof(KeyEventArgs))) {
+    // Call handler in shell
+    KShell_NotifyKeyPress(keyArgs);
   }
 }
 
 
 
-char textBuffer[256] = { };
+// ----------------------------------------------------------------------
+// Main
+// ----------------------------------------------------------------------
+
+import(Renderer);
+
+extern void KShell_Initialize(VgaConfig *config, HeapArea *heap);
+extern void KShell_DrawLayout(VgaConfig *config);
+
+VgaConfig vgaConfig;
+
+
+
+
 void KernelMain() {
   _InitializeHeap();
-  
   Interrupt.SetUpAll(_Kernel_Idt, &_Kernel_IdtDescriptor);
 
-  commandPtr = commandBuffer;
-  
-  if (Gfx.Core.Initialize(640, 480, 4, _Kernel_DynMemory))
-    Gfx.Core.Refresh();
+  vgaConfig = (VgaConfig) {
+    .Resolution = (Vector2d) {
+      .X = 640,
+      .Y = 480
+    },
+    .PlaneCount = 4,
+    .Backbuffer = Heap.Allocate(_Kernel_DynMemory, (640 / 8) * 480 * 4),
+    .ScreenBuffer = (U8*)0xa0000
+  };
 
-  Gfx.Core.SetPaletteColor(1, RgbColorScarletRedNormal);
-
-  
+  KShell_Initialize(&vgaConfig, _Kernel_DynMemory);
 
   for (;;) {
-    String.Format(textBuffer, "Used  = %d\nFree  = %d\nTotal = %d",
-		  _Kernel_DynMemory->TotalBytesUsed,
-		  _Kernel_DynMemory->TotalBytesFree,
-		  _Kernel_DynMemory->TotalBytes);
-    
     _ProcessKeyboardInput();
     _HandleInput();
 
-    Gfx.Draw.String(0, 30, commandBuffer, 0xf, Courier);
-    Gfx.Draw.String(0, 0, textBuffer, 0x7, Courier);
-    Gfx.Core.Refresh();
+    KShell_DrawLayout(&vgaConfig);
+    Renderer.Refresh(&vgaConfig);
     
    
     __asm__ __volatile__("hlt");

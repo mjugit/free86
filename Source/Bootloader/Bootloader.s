@@ -187,10 +187,10 @@ Bootloader_LoadKernel:
 
 	movb $0x02, %ah		// Function code
 
-	// THIS MIGHT ACTUAL CAUSE AN ERROR ON REAL HARDWARE
-	// Reason: We're reading more sectors than a floppy has on one track
-	// Would be better to spread the data, but this works in the emulator
-	// for now. Newer BIOSes should'nt have a problem with that.
+	// REMARK mju 26-02-16:
+	// Two reads are necessary on vintage systems, because the disk geometry
+	// is 80 sectors per track. Newer BIOS versions can read more than 80
+	// sectors at once, but that's not always the case.
 	
 	movb $48, %al		// Number of sectors to read
 	movb $0, %ch		// Cylinder number
@@ -201,8 +201,27 @@ Bootloader_LoadKernel:
 	int $0x13
 
 	jc 1f
-	jmp 2f
 
+	// Essentially the same as above
+	
+	xorw  %ax, %ax
+	movw  $KernelLoadSegment, %ax
+	addw  $0x1800, %ax       // 24 KiB / 16 = 0x1800
+	movw  %ax, %es
+	xorw  %bx, %bx
+	
+	movb $0x02, %ah
+
+	movb $49, %al
+	movb $1, %ch
+	movb $1, %cl
+	movb $0, %dh
+	movb $0, %dl
+	
+	int $0x13
+
+	jnc 2f
+	
 1:
 	// Print error message
 	

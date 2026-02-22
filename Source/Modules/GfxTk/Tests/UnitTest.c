@@ -1,6 +1,6 @@
 /*
 	
-  Copyright © 2025 Maximilian Jung
+  Copyright © 2026 Maximilian Jung
 
   Permission is hereby granted, free of charge, to any person
   obtaining a copy of this software and associated documentation
@@ -26,33 +26,22 @@
 	
 */
 
-#include "../Include/Gfx.h"
 
-use(GfxDraw);
-
-
-extern GfxData _Gfx_Data;
+#include "MinUnit.h"
 
 
-void _GfxDraw_StringImplementation(U16 x, U16 y, const char *string, U8 color, Font font) {
-  if (!string)
-    return;
+MU_TEST(SomeTest) {
+  mu_check(1);
+}
 
-  U16 offsetX = x;
-  U16 screenWidth = _Gfx_Data.ScreenWidth;
-  for (const char *ptr = string; *ptr; ptr++) {
-    if (*ptr == '\n') {
-      offsetX = x;
-      y += 8;
-      continue;
-    }
-    
-    GfxDraw.Char(offsetX, y, *ptr, color, font);
+MU_TEST_SUITE(SomeTestSuite) {
+  MU_RUN_TEST(SomeTest);
+}
 
-    offsetX += 8;
-    if (offsetX >= screenWidth) {
-      offsetX = 0;
-      y += 8;
-    }
-  }
+
+int main(void) {
+  MU_RUN_SUITE(SomeTestSuite);
+  
+  MU_REPORT();
+  return MU_EXIT_CODE;
 }
